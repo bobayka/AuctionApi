@@ -39,7 +39,7 @@ func addUser(u *request.RegUser) {
 		ID:        idUser,
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
-		Birthday:  u.Birthday,
+		Birthday:  *u.Birthday,
 		Email:     u.Email,
 		Password:  hashString(u.Password),
 		CreatedAt: time.Now(),
@@ -108,7 +108,9 @@ func getUserByID(id int) *user.User {
 func update(db *user.User, u *request.UpdateUser) {
 	db.FirstName = u.FirstName
 	db.LastName = u.LastName
-	db.Birthday = u.Birthday
+	if !u.Birthday.IsZero() {
+		db.Birthday = *u.Birthday
+	}
 	db.UpdatedAt = time.Now()
 }
 
