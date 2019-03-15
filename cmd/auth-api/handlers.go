@@ -41,7 +41,7 @@ func (h *AuthHandler) Routes() *chi.Mux {
 	return r
 }
 
-func readReqData(w http.ResponseWriter, r *http.Request, userData interface{}) *myerr.AppError {
+func readReqData(r *http.Request, userData interface{}) *myerr.AppError {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		err = errors.Wrap(err, "read error")
@@ -56,29 +56,29 @@ func readReqData(w http.ResponseWriter, r *http.Request, userData interface{}) *
 	return nil
 }
 
-func checkEmail(w http.ResponseWriter, email string) *myerr.AppError {
+func checkEmail(email string) *myerr.AppError {
 	if validEmail.FindStringSubmatch(email) == nil {
 		return myerr.NewErr(nil, "email doesnt match pattern", 400)
 	}
 	return nil
 }
 
-func readReqAndCheckEmail(w http.ResponseWriter, r *http.Request, userData request.EmailGetter) *myerr.AppError {
+func readReqAndCheckEmail(r *http.Request, userData request.EmailGetter) *myerr.AppError {
 
-	if err := readReqData(w, r, userData); err != nil {
+	if err := readReqData(r, userData); err != nil {
 		return err.MyWrap("read req data")
 
 	}
-	if err := checkEmail(w, userData.GetEmail()); err != nil {
+	if err := checkEmail(userData.GetEmail()); err != nil {
 		return err.MyWrap("error in check email")
 	}
 	return nil
 }
 
-func (auth AuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
+func (h *AuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
 	var user request.RegUser
 
-	if err := readReqAndCheckEmail(w, r, &user); err != nil {
+	if err := readReqAndCheckEmail(r, &user); err != nil {
 		return err.MyWrap("error in readreqandcheckemail")
 	}
 	fmt.Printf("%+v", user)
@@ -86,9 +86,9 @@ func (auth AuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Reque
 	return err.MyWrap("error in registeruser method")
 }
 
-func (auth AuthHandler) AuthorizationHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
+func (h *AuthHandler) AuthorizationHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
 	var user request.AuthUser
-	if err := readReqAndCheckEmail(w, r, &user); err != nil {
+	if err := readReqAndCheckEmail(r, &user); err != nil {
 		return err.MyWrap("error in readreqandcheckemail")
 	}
 	err := myAuth.AuthorizeUser(&user)
@@ -96,9 +96,9 @@ func (auth AuthHandler) AuthorizationHandler(w http.ResponseWriter, r *http.Requ
 
 }
 
-func (auth AuthHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
+func (h *AuthHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
 	var user request.UpdateUser
-	if err := readReqData(w, r, &user); err != nil {
+	if err := readReqData(r, &user); err != nil {
 		return err.MyWrap("error in readreqdata")
 	}
 	err := myAuth.UpdateUser(&user)
