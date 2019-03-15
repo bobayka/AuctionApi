@@ -17,12 +17,8 @@ type RegUser struct {
 	GeneralInfo
 }
 
-func (u RegUser) GetEmail() string {
-	return u.Email
-}
-
-func (u RegUser) GetToken() string {
-	return ""
+func (r *RegUser) GetEmail() string {
+	return r.Email
 }
 
 type AuthUser struct {
@@ -30,12 +26,11 @@ type AuthUser struct {
 	Token string `json:"authorization"`
 }
 
-func (u AuthUser) GetEmail() string {
-	return u.Email
+func (a *AuthUser) GetEmail() string {
+	return a.Email
 }
-
-func (u AuthUser) GetToken() string {
-	return u.Token
+func (a *AuthUser) GetToken() string {
+	return a.Token
 }
 
 type UpdateUser struct {
@@ -43,22 +38,14 @@ type UpdateUser struct {
 	Token string `json:"authorization"`
 }
 
-func (u UpdateUser) GetEmail() string {
-	return ""
-}
-
-func (u UpdateUser) GetToken() string {
+func (u *UpdateUser) GetToken() string {
 	return u.Token
 }
 
-type UserEmail interface {
-	GetEmail() string
-}
-
-type UserToken interface {
+type TokenGetter interface {
 	GetToken() string
 }
-type User interface {
-	UserEmail
-	UserToken
+
+type EmailGetter interface {
+	GetEmail() string
 }

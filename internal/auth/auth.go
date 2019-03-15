@@ -1,12 +1,13 @@
 package auth
 
 import (
-	"crypto/md5"
 	"fmt"
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/internal/requests"
 	"gitlab.com/bobayka/courseproject/internal/session"
 	"gitlab.com/bobayka/courseproject/internal/user"
+	"gitlab.com/bobayka/courseproject/pkg/myerr"
+	"golang.org/x/crypto/bcrypt"
 	"math/rand"
 	"regexp"
 	"time"
@@ -17,11 +18,15 @@ var sessionDatabase = make(map[string]*session.Session)
 var bearer = regexp.MustCompile("^(b|B)earer:([ a-z]*)$")
 var idUser int
 
-func RandomString(len int) string {
+func init() {
 	rand.Seed(time.Now().UnixNano())
+}
+
+func RandomString(len int) string {
+
 	bytes := make([]byte, len)
 	for i := 0; i < len; i++ {
-		bytes[i] = byte(97 + rand.Intn(25)) //a=65 and z = 97+25
+		bytes[i] = byte(int('a') + rand.Intn('z'-'a'))
 	}
 	if sessionDatabase[string(bytes)] != nil {
 		return RandomString(len)
@@ -29,42 +34,47 @@ func RandomString(len int) string {
 	return string(bytes)
 }
 
-func hashString(s string) string {
-	return fmt.Sprintf("%x", md5.Sum([]byte(s)))
-}
-
-func addUser(u *request.RegUser) {
+func addUser(u *request.RegUser) *myerr.AppError {
 	idUser++
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		err = errors.Wrap(err, "can't generate password hash")
+		return myerr.NewErr(err, "wrong password", 422)
+	}
 	userDatabase[u.Email] = &user.User{
 		ID:        idUser,
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
-		Birthday:  *u.Birthday,
+		Birthday:  u.Birthday,
 		Email:     u.Email,
-		Password:  hashString(u.Password),
+		Password:  string(passwordHash),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 	fmt.Printf("AddUser:\n%+v", *userDatabase[u.Email])
+	return nil
 }
 
-func RegisterUser(u *request.RegUser) error {
+func RegisterUser(u *request.RegUser) *myerr.AppError {
 	if userDatabase[u.Email] != nil {
-		return errors.New("User is already registered")
+		return myerr.NewErr(nil, "User is already registered", 422)
 	}
-	addUser(u)
-	return errors.New("Registration complete")
+	err := addUser(u)
+	if err != nil {
+		return err.MyWrap("user can't be add")
+	}
+	return myerr.NewErr(nil, "Registration complete", 200)
 }
 
-func checkValidToken(u request.User) (*session.Session, error) {
+func checkValidToken(u request.TokenGetter) (*session.Session, *myerr.AppError) {
 	var s *session.Session
 	if bearer.FindStringSubmatch(u.GetToken()) == nil {
-		return nil, errors.New("token doesnt match pattern 	`Bearer:*******` ")
+		return nil, myerr.NewErr(nil, "token doesnt match pattern `Bearer:*******` ", 449)
 	}
 	if s = sessionDatabase[u.GetToken()[len("bearer:"):]]; s != nil && s.CheckTokenTime() {
-		return s, errors.New("Accept")
+		return s, myerr.NewErr(nil, "Accept", 200)
 	}
-	return nil, errors.New("Wrong token")
+	return nil, myerr.NewErr(nil, "Wrong token", 401)
 }
 
 func addSession(db *user.User) string {
@@ -79,20 +89,24 @@ func addSession(db *user.User) string {
 	return token
 }
 
-func AuthorizeUser(u *request.AuthUser) error {
+func AuthorizeUser(u *request.AuthUser) *myerr.AppError {
 	_, err := checkValidToken(u)
-	if err.Error() != "Wrong token" {
+	if err.Message != "Wrong token" {
 		return err
 	}
 	var db *user.User
 	if db = userDatabase[u.Email]; db == nil {
-		return errors.New("Wrong email")
+		return myerr.NewErr(nil, "Wrong email", 400)
 	}
-	if hashString(u.Password) != db.Password {
-		return errors.New("Wrong password")
+	if bcrypt.CompareHashAndPassword([]byte(db.Password), []byte(u.Password)) != nil {
+		return myerr.NewErr(nil, "Wrong password", 400)
 	}
+	//if err := bcrypt.CompareHashAndPassword([]byte(db.Password), []byte(u.Password)); err != nil {
+	//	err = errors.Wrap(err, "cant convert password to hash")
+	//	return myerr.NewErr(err, "Wrong password", 400)
+	//}
 	token := addSession(db)
-	return errors.New("Bearer: " + token)
+	return myerr.NewErr(nil, "Bearer: "+token, 200)
 
 }
 
@@ -108,19 +122,19 @@ func getUserByID(id int) *user.User {
 func update(db *user.User, u *request.UpdateUser) {
 	db.FirstName = u.FirstName
 	db.LastName = u.LastName
-	if !u.Birthday.IsZero() {
-		db.Birthday = *u.Birthday
+	if u.Birthday != nil && !u.Birthday.IsZero() {
+		db.Birthday = u.Birthday
 	}
 	db.UpdatedAt = time.Now()
 }
 
-func UpdateUser(u *request.UpdateUser) error {
+func UpdateUser(u *request.UpdateUser) *myerr.AppError {
 	s, err := checkValidToken(u)
-	if err.Error() != "Accept" {
+	if err.Message != "Accept" {
 		return err
 	}
 	db := getUserByID(s.UserID)
 	update(db, u)
 	fmt.Printf("UpdateUser:\n%+v", userDatabase[db.Email])
-	return errors.New("Update successful")
+	return myerr.NewErr(nil, "Update successful", 200)
 }

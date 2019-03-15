@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	errors2 "github.com/pkg/errors"
+	"github.com/go-chi/chi"
+	"github.com/pkg/errors"
 	myAuth "gitlab.com/bobayka/courseproject/internal/auth"
 	"gitlab.com/bobayka/courseproject/internal/requests"
+	"gitlab.com/bobayka/courseproject/pkg/myerr"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,86 +16,91 @@ import (
 
 var validEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
+func makeHandler(fn func(http.ResponseWriter, *http.Request) *myerr.AppError) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := fn(w, r)
+		if err.Message != "" {
+			http.Error(w, err.Message, err.Code)
+		}
+		if err.Err != nil {
+			log.Println(err.Err)
+		}
+	}
+}
+
 type AuthHandler struct {
 }
 
-func readReqData(w http.ResponseWriter, r *http.Request, userData request.User) error {
+func (h *AuthHandler) Routes() *chi.Mux {
+	r := chi.NewRouter()
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Post("/signup", makeHandler(h.RegistrationHandler))
+		r.Post("/signin", makeHandler(h.AuthorizationHandler))
+		r.Put("/users/0", makeHandler(h.UpdateHandler))
+	})
+	return r
+}
+
+func readReqData(w http.ResponseWriter, r *http.Request, userData interface{}) *myerr.AppError {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return errors2.Wrap(err, "read error")
-
+		err = errors.Wrap(err, "read error")
+		return myerr.NewErr(err, "Unprocessable Entity", 422)
 	}
-	fmt.Println(string(body))
+
 	err = json.Unmarshal(body, userData)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return errors2.Wrap(err, "unmarshal error")
+		err = errors.Wrap(err, "unmarshal error")
+		return myerr.NewErr(err, "Unprocessable Entity", 422)
 	}
 	return nil
 }
 
-func checkEmail(w http.ResponseWriter, email string) error {
+func checkEmail(w http.ResponseWriter, email string) *myerr.AppError {
 	if validEmail.FindStringSubmatch(email) == nil {
-		_, err := w.Write([]byte("Email doesnt match pattern"))
-		if err != nil {
-			log.Println("error in write method checkEmail")
-		}
-		return errors.New("email doesnt match pattern")
+		return myerr.NewErr(nil, "email doesnt match pattern", 400)
 	}
 	return nil
 }
 
-func readReqAndCheckEmail(w http.ResponseWriter, r *http.Request, userData request.User) error {
+func readReqAndCheckEmail(w http.ResponseWriter, r *http.Request, userData request.EmailGetter) *myerr.AppError {
 
 	if err := readReqData(w, r, userData); err != nil {
-		return errors2.Wrap(err, "read req data")
+		return err.MyWrap("read req data")
+
 	}
 	if err := checkEmail(w, userData.GetEmail()); err != nil {
-		return errors2.Wrap(err, "check email")
+		return err.MyWrap("error in check email")
 	}
 	return nil
 }
 
-func (auth AuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
+func (auth AuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
 	var user request.RegUser
-	err := readReqAndCheckEmail(w, r, &user)
-	if err != nil {
-		log.Printf("registration handler: %s", err)
-		return
+
+	if err := readReqAndCheckEmail(w, r, &user); err != nil {
+		return err.MyWrap("error in readreqandcheckemail")
 	}
-	status := myAuth.RegisterUser(&user)
-	_, err = w.Write([]byte(errors2.Cause(status).Error()))
-	if err != nil {
-		log.Println("error in write method registrationhandler")
-	}
+	fmt.Printf("%+v", user)
+	err := myAuth.RegisterUser(&user)
+	return err.MyWrap("error in registeruser method")
 }
 
-func (auth AuthHandler) AuthorizationHandler(w http.ResponseWriter, r *http.Request) {
+func (auth AuthHandler) AuthorizationHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
 	var user request.AuthUser
-	err := readReqAndCheckEmail(w, r, &user)
-	if err != nil {
-		log.Printf("authorization handler: %s", err)
-		return
+	if err := readReqAndCheckEmail(w, r, &user); err != nil {
+		return err.MyWrap("error in readreqandcheckemail")
 	}
-	status := myAuth.AuthorizeUser(&user)
-	_, err = w.Write([]byte(errors2.Cause(status).Error()))
-	if err != nil {
-		log.Println("error in write method authorizationhandler")
-	}
+	err := myAuth.AuthorizeUser(&user)
+	return err.MyWrap("error in authorizeuser method")
 
 }
 
-func (auth AuthHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
+func (auth AuthHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
 	var user request.UpdateUser
-	err := readReqData(w, r, &user)
-	if err != nil {
-		log.Printf("update handler: %s", err)
-		return
+	if err := readReqData(w, r, &user); err != nil {
+		return err.MyWrap("error in readreqdata")
 	}
-	status := myAuth.UpdateUser(&user)
-	_, err = w.Write([]byte(errors2.Cause(status).Error()))
-	if err != nil {
-		log.Println("error in write method UpdateHandler")
-	}
+	err := myAuth.UpdateUser(&user)
+	return err.MyWrap("error in updateuser method")
 }
