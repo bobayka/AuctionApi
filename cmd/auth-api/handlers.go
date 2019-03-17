@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/pkg/errors"
 	myAuth "gitlab.com/bobayka/courseproject/internal/auth"
 	"gitlab.com/bobayka/courseproject/internal/requests"
@@ -33,7 +34,13 @@ type AuthHandler struct {
 
 func (h *AuthHandler) Routes() *chi.Mux {
 	r := chi.NewRouter()
-	r.Route("/api/v1", func(r chi.Router) {
+	r.Use(middleware.RealIP)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.AllowContentType("application/json"))
+
+	r.Route("/", func(r chi.Router) {
 		r.Post("/signup", makeHandler(h.RegistrationHandler))
 		r.Post("/signin", makeHandler(h.AuthorizationHandler))
 		r.Put("/users/0", makeHandler(h.UpdateHandler))
@@ -44,14 +51,14 @@ func (h *AuthHandler) Routes() *chi.Mux {
 func readReqData(r *http.Request, userData interface{}) *myerr.AppError {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		err = errors.Wrap(err, "read error")
-		return myerr.NewErr(err, "Unprocessable Entity", 422)
+		return myerr.NewErr(errors.Wrap(err, "read error"),
+			http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 	}
 
 	err = json.Unmarshal(body, userData)
 	if err != nil {
-		err = errors.Wrap(err, "unmarshal error")
-		return myerr.NewErr(err, "Unprocessable Entity", 422)
+		return myerr.NewErr(errors.Wrap(err, "unmarshal error"),
+			http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 	}
 	return nil
 }
@@ -77,7 +84,6 @@ func readReqAndCheckEmail(r *http.Request, userData request.EmailGetter) *myerr.
 
 func (h *AuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) *myerr.AppError {
 	var user request.RegUser
-
 	if err := readReqAndCheckEmail(r, &user); err != nil {
 		return err.MyWrap("error in readreqandcheckemail")
 	}

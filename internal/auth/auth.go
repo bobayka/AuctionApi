@@ -38,8 +38,10 @@ func addUser(u *request.RegUser) *myerr.AppError {
 	idUser++
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
-		err = errors.Wrap(err, "can't generate password hash")
-		return myerr.NewErr(err, "wrong password", 422)
+		return myerr.NewErr(
+			errors.Wrap(err, "can't generate password hash"),
+			"wrong password",
+			422)
 	}
 	userDatabase[u.Email] = &user.User{
 		ID:        idUser,
