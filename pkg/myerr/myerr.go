@@ -10,9 +10,6 @@ type AppError struct {
 	Code    int
 }
 
-//func (a *AppError) Error() string {
-//	return fmt.Sprintf("Error: %s Msg: %s Code: %d", a.Err, a.Message, a.Code)
-//}
 func (a *AppError) MyWrap(msg string) *AppError {
 	a.Err = errors.Wrap(a.Err, msg)
 	return a

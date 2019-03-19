@@ -9,6 +9,7 @@ import (
 	"gitlab.com/bobayka/courseproject/pkg/myerr"
 	"golang.org/x/crypto/bcrypt"
 	"math/rand"
+	"net/http"
 	"regexp"
 	"time"
 )
@@ -65,13 +66,13 @@ func RegisterUser(u *request.RegUser) *myerr.AppError {
 	if err != nil {
 		return err.MyWrap("user can't be add")
 	}
-	return myerr.NewErr(nil, "Registration complete", 200)
+	return myerr.NewErr(nil, "Registration complete", http.StatusCreated)
 }
 
 func checkValidToken(u request.TokenGetter) (*session.Session, *myerr.AppError) {
 	var s *session.Session
 	if bearer.FindStringSubmatch(u.GetToken()) == nil {
-		return nil, myerr.NewErr(nil, "token doesnt match pattern `Bearer:*******` ", 449)
+		return nil, myerr.NewErr(nil, "token doesnt match pattern `Bearer:*******`", 449)
 	}
 	if s = sessionDatabase[u.GetToken()[len("bearer:"):]]; s != nil && s.CheckTokenTime() {
 		return s, myerr.NewErr(nil, "Accept", 200)
@@ -103,10 +104,7 @@ func AuthorizeUser(u *request.AuthUser) *myerr.AppError {
 	if bcrypt.CompareHashAndPassword([]byte(db.Password), []byte(u.Password)) != nil {
 		return myerr.NewErr(nil, "Wrong password", 400)
 	}
-	//if err := bcrypt.CompareHashAndPassword([]byte(db.Password), []byte(u.Password)); err != nil {
-	//	err = errors.Wrap(err, "cant convert password to hash")
-	//	return myerr.NewErr(err, "Wrong password", 400)
-	//}
+
 	token := addSession(db)
 	return myerr.NewErr(nil, "Bearer: "+token, 200)
 
