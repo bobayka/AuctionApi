@@ -9,14 +9,13 @@ import (
 	"gitlab.com/bobayka/courseproject/pkg/myerr"
 	"golang.org/x/crypto/bcrypt"
 	"math/rand"
-	"net/http"
 	"regexp"
 	"time"
 )
 
 var userDatabase = make(map[string]*user.User)
 var sessionDatabase = make(map[string]*session.Session)
-var bearer = regexp.MustCompile("^(b|B)earer:([ a-z]*)$")
+var Bearer = regexp.MustCompile("(b|B)earer:([ a-z]*)")
 var idUser int
 
 func init() {
@@ -24,7 +23,6 @@ func init() {
 }
 
 func RandomString(len int) string {
-
 	bytes := make([]byte, len)
 	for i := 0; i < len; i++ {
 		bytes[i] = byte(int('a') + rand.Intn('z'-'a'))
@@ -35,14 +33,15 @@ func RandomString(len int) string {
 	return string(bytes)
 }
 
-func addUser(u *request.RegUser) *myerr.AppError {
+func addUser(u *request.RegUser) error {
 	idUser++
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return myerr.NewErr(
-			errors.Wrap(err, "can't generate password hash"),
-			"wrong password",
-			422)
+		return errors.Wrapf(myerr.UnprocessableEntity, "can't generate password hash: %s", err)
+		//return myerr.NewErr(
+		//	errors.Wrap(err, "can't generate password hash"),
+		//	"wrong password",
+		//	422)
 	}
 	userDatabase[u.Email] = &user.User{
 		ID:        idUser,
@@ -58,26 +57,26 @@ func addUser(u *request.RegUser) *myerr.AppError {
 	return nil
 }
 
-func RegisterUser(u *request.RegUser) *myerr.AppError {
+func RegisterUser(u *request.RegUser) error {
 	if userDatabase[u.Email] != nil {
-		return myerr.NewErr(nil, "User is already registered", 422)
+		return errors.Wrap(myerr.BadRequest, "user is already registered")
 	}
 	err := addUser(u)
 	if err != nil {
-		return err.MyWrap("user can't be add")
+		return errors.Wrap(err, "user can't be add")
 	}
-	return myerr.NewErr(nil, "Registration complete", http.StatusCreated)
+	return myerr.Created
 }
 
-func checkValidToken(u request.TokenGetter) (*session.Session, *myerr.AppError) {
+func checkValidToken(u request.TokenGetter) (*session.Session, error) {
 	var s *session.Session
-	if bearer.FindStringSubmatch(u.GetToken()) == nil {
-		return nil, myerr.NewErr(nil, "token doesnt match pattern `Bearer:*******`", 449)
+	if Bearer.FindStringSubmatch(u.GetToken()) == nil {
+		return nil, errors.Wrap(myerr.UnprocessableEntity, "token doesnt match pattern `^(b|B)earer:([ a-z]*)$")
 	}
 	if s = sessionDatabase[u.GetToken()[len("bearer:"):]]; s != nil && s.CheckTokenTime() {
-		return s, myerr.NewErr(nil, "Accept", 200)
+		return s, errors.Wrap(myerr.Accepted, "Accepted")
 	}
-	return nil, myerr.NewErr(nil, "Wrong token", 401)
+	return nil, errors.Wrap(myerr.Unauthorized, "Unauthorized")
 }
 
 func addSession(db *user.User) string {
@@ -92,21 +91,25 @@ func addSession(db *user.User) string {
 	return token
 }
 
-func AuthorizeUser(u *request.AuthUser) *myerr.AppError {
+func AuthorizeUser(u *request.AuthUser) error {
 	_, err := checkValidToken(u)
-	if err.Message != "Wrong token" {
+	if errors.Cause(err) != myerr.Unauthorized {
 		return err
 	}
 	var db *user.User
 	if db = userDatabase[u.Email]; db == nil {
-		return myerr.NewErr(nil, "Wrong email", 400)
+		return errors.Wrap(myerr.BadRequest, "wrong email")
 	}
-	if bcrypt.CompareHashAndPassword([]byte(db.Password), []byte(u.Password)) != nil {
-		return myerr.NewErr(nil, "Wrong password", 400)
+	if err := bcrypt.CompareHashAndPassword([]byte(db.Password), []byte(u.Password)); err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword || err == bcrypt.ErrHashTooShort {
+			return errors.Wrap(myerr.BadRequest, "wrong password")
+		} else {
+			return errors.Wrapf(myerr.BadRequest, "password cant be compared: %s", err)
+		}
 	}
 
 	token := addSession(db)
-	return myerr.NewErr(nil, "Bearer: "+token, 200)
+	return errors.Wrap(myerr.Accepted, "Bearer: "+token)
 
 }
 
@@ -128,13 +131,13 @@ func update(db *user.User, u *request.UpdateUser) {
 	db.UpdatedAt = time.Now()
 }
 
-func UpdateUser(u *request.UpdateUser) *myerr.AppError {
+func UpdateUser(u *request.UpdateUser) error {
 	s, err := checkValidToken(u)
-	if err.Message != "Accept" {
+	if errors.Cause(err) != myerr.Accepted {
 		return err
 	}
 	db := getUserByID(s.UserID)
 	update(db, u)
 	fmt.Printf("UpdateUser:\n%+v", userDatabase[db.Email])
-	return myerr.NewErr(nil, "Update successful", 200)
+	return errors.Wrap(myerr.Success, "Update successful")
 }
