@@ -4,16 +4,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-type AppError struct {
-	Err     error
-	Message string
-	Code    int
-}
-
-func (a *AppError) MyWrap(msg string) *AppError {
-	a.Err = errors.Wrap(a.Err, msg)
-	return a
-}
-func NewErr(err error, msg string, code int) *AppError {
-	return &AppError{Err: err, Message: msg, Code: code}
-}
+var (
+	UnprocessableEntity = errors.New("unprocessable entity")
+	Created             = errors.New("created")
+	Accepted            = errors.New("accepted")
+	Unauthorized        = errors.New("unauthorized")
+	BadRequest          = errors.New("bad request")
+	Success             = errors.New("success")
+)
