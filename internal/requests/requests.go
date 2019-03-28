@@ -1,11 +1,13 @@
 package request
 
-import "time"
+import (
+	"gitlab.com/bobayka/courseproject/pkg/customTime"
+)
 
 type BasicInfo struct {
-	FirstName string     `json:"first_name"`
-	LastName  string     `json:"last_name"`
-	Birthday  *time.Time `json:"birthday,omitempty"`
+	FirstName string                 `json:"first_name"`
+	LastName  string                 `json:"last_name"`
+	Birthday  *customTime.CustomTime `json:"birthday,omitempty"`
 }
 
 type GeneralInfo struct {
@@ -23,23 +25,20 @@ func (r *RegUser) GetEmail() string {
 
 type AuthUser struct {
 	GeneralInfo
-	Token string `json:"authorization"`
 }
 
 func (a *AuthUser) GetEmail() string {
 	return a.Email
 }
-func (a *AuthUser) GetToken() string {
-	return a.Token
-}
 
 type UpdateUser struct {
 	BasicInfo
-	Token string `json:"authorization"`
+	TokenType   string `json:"token_type"`
+	AccessToken string `json:"access_token"`
 }
 
 func (u *UpdateUser) GetToken() string {
-	return u.Token
+	return u.AccessToken
 }
 
 type TokenGetter interface {
