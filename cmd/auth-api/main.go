@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/go-chi/chi"
 	"gitlab.com/bobayka/courseproject/internal/postgres"
 	"log"
 	"net/http"
@@ -17,8 +18,11 @@ func main() {
 	}
 	defer StmtsStorage.Close()
 
+	r := chi.NewRouter()
 	auth := NewAuthHandler(StmtsStorage)
-	r := auth.Routes()
-	r.Mount("/v1/auction", r)
+	r = auth.Routes(r)
+	lotServ := NewLotServiceHandler(StmtsStorage)
+	r = lotServ.Routes(r)
+	r.Mount("/v1/auction/", r)
 	log.Fatal(http.ListenAndServe(":5000", r))
 }

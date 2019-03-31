@@ -2,6 +2,7 @@ package request
 
 import (
 	"gitlab.com/bobayka/courseproject/pkg/customTime"
+	"time"
 )
 
 type BasicInfo struct {
@@ -37,14 +38,33 @@ type UpdateUser struct {
 	AccessToken string `json:"access_token"`
 }
 
-func (u *UpdateUser) GetToken() string {
-	return u.AccessToken
+func (u *UpdateUser) GetTokenType() string {
+	return u.TokenType
 }
 
-type TokenGetter interface {
-	GetToken() string
+type TokenTypeGetter interface {
+	GetTokenType() string
 }
 
 type EmailGetter interface {
 	GetEmail() string
+}
+
+type LotToCreateUpdate struct {
+	Title       string    `json:"title"`
+	Description *string   `json:"description"`
+	MinPrice    float64   `json:"min_price"`
+	PriceStep   float64   `json:"price_step"`
+	EndAt       time.Time `json:"end_at"`
+	TokenType   string    `json:"token_type"`
+	AccessToken string    `json:"access_token"`
+}
+
+func (c *LotToCreateUpdate) GetTokenType() string {
+	return c.TokenType
+}
+
+type Token struct {
+	TokenType   string `json:"token_type"`
+	AccessToken string `json:"access_token"`
 }
