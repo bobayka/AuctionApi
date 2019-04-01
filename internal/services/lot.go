@@ -1,11 +1,12 @@
 package services
 
 import (
+	"database/sql"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
+	"gitlab.com/bobayka/courseproject/internal/domains"
 	"gitlab.com/bobayka/courseproject/internal/postgres"
 	"gitlab.com/bobayka/courseproject/internal/requests"
-	"gitlab.com/bobayka/courseproject/internal/responce"
 	"gitlab.com/bobayka/courseproject/pkg/myerr"
 )
 
@@ -13,11 +14,7 @@ type LotServ struct {
 	StmtsStorage *postgres.UsersStorage
 }
 
-func (ls *LotServ) CreateLot(lot *request.LotToCreateUpdate, userID int64) (*responce.LotToResponce, error) {
-	//s, err := CheckValidToken(lot.AccessToken, ls.StmtsStorage)
-	//if errors.Cause(err) != myerr.Success {
-	//	return nil, errors.Wrap(err, "cant get valid token")
-	//}
+func (ls *LotServ) CreateLot(lot *request.LotToCreateUpdate, userID int64) (*domains.Lot, error) {
 	LotID, err := ls.StmtsStorage.InsertLot(userID, lot)
 	if err != nil {
 		if pqerr, ok := errors.Cause(err).(*pq.Error); ok && pqerr.Code == check_violation {
@@ -29,11 +26,30 @@ func (ls *LotServ) CreateLot(lot *request.LotToCreateUpdate, userID int64) (*res
 	if err != nil {
 		return nil, err
 	}
-	dbUser, err := ls.StmtsStorage.FindUserByID(userID)
+	return dbLot, myerr.Success
+}
+
+func (ls *LotServ) UpdateLot(lot *request.LotToCreateUpdate, lotID int64) (*domains.Lot, error) {
+	if err := ls.StmtsStorage.UpdateLotBD(lotID, lot); err != nil {
+		if pqerr, ok := errors.Cause(err).(*pq.Error); ok && pqerr.Code == check_violation {
+			return nil, errors.Wrap(myerr.BadRequest, "$end auction date less than update lot date$")
+		}
+		return nil, err
+	}
+	dbLot, err := ls.StmtsStorage.FindLotByID(lotID)
 	if err != nil {
 		return nil, err
 	}
-	shortUser := &responce.ShortUSer{ID: userID, FirstName: dbUser.FirstName, LastName: dbUser.LastName}
+	return dbLot, myerr.Success
+}
 
-	return &responce.LotToResponce{Lot: dbLot, Creator: shortUser, Buyer: shortUser}, myerr.Success
+func (ls *LotServ) GetLotByID(lotID int64) (*domains.Lot, error) {
+	dbLot, err := ls.StmtsStorage.FindLotByID(lotID)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, myerr.NotFound
+		}
+		return nil, err
+	}
+	return dbLot, myerr.Success
 }

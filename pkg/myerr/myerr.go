@@ -16,6 +16,7 @@ var (
 	Unauthorized        = errors.New("unauthorized")
 	BadRequest          = errors.New("bad request")
 	Success             = errors.New("success")
+	NotFound            = errors.New("not found")
 )
 
 func Split(str string) []string {

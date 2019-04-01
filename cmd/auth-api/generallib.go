@@ -16,6 +16,10 @@ import (
 
 var validEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
+type key int
+
+const UserIDKey key = 0
+
 func makeHandler(fn func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := fn(w, r)
@@ -51,7 +55,7 @@ func CheckTokenMiddleware(store *postgres.UsersStorage) func(next http.Handler) 
 					return errors.Wrap(err, "lot cant be create")
 				}
 			}
-			ctx := context.WithValue(r.Context(), "user_id", s.UserID)
+			ctx := context.WithValue(r.Context(), UserIDKey, s.UserID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return nil
 		}
@@ -59,12 +63,12 @@ func CheckTokenMiddleware(store *postgres.UsersStorage) func(next http.Handler) 
 	}
 }
 
-func readReqData(r *http.Request, userData interface{}) error {
+func readReqData(r *http.Request, Data interface{}) error {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return errors.Wrapf(err, "$read error$")
 	}
-	err = json.Unmarshal(body, userData)
+	err = json.Unmarshal(body, Data)
 	if err != nil {
 		return errors.Wrapf(err, "$unmarshal error$")
 	}
@@ -89,21 +93,3 @@ func readReqAndCheckEmail(r *http.Request, userData request.EmailGetter) error {
 	}
 	return nil
 }
-
-//func readDataCheckTokenType(r *http.Request, u request.TokenTypeGetter) ([]byte, error) {
-//	if err := readReqData(r, &u); err != nil {
-//		resp, errM := myerr.ErrMarshal(myerr.GetClientErr(err.Error()))
-//		if errM != nil {
-//			return nil, errors.Wrap(err, "marshal error")
-//		}
-//		return resp, nil
-//	}
-//	//if u.GetTokenType() != "bearer" {
-//	//	resp, err := myerr.ErrMarshal("invalid token type")
-//	//	if err != nil {
-//	//		return nil, errors.Wrap(err, "marshal error")
-//	//	}
-//	//	return resp, nil
-//	//}
-//	return nil, nil
-//}

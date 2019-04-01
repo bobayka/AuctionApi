@@ -19,12 +19,16 @@ const (
 	findUserByEmailQuery    = `SELECT * FROM users WHERE email = $1`
 	sessionInsertFields     = `session_id, user_id`
 	sessionInsertQuery      = `INSERT INTO sessions (` + sessionInsertFields + `) VALUES ($1, $2)`
-	findSessionByTokenQuery = ` SELECT * FROM sessions WHERE session_id = $1`
+	findSessionByTokenQuery = `SELECT * FROM sessions WHERE session_id = $1`
 	userUpdateFields        = `first_name = $1, last_name = $2, birthday = $3`
 	updateUserQuery         = `UPDATE users SET ` + userUpdateFields + `WHERE id = $4`
 	lotInsertFields         = `title, description, min_price, price_step, end_at, creator_id, buyer_id`
 	insertLotQuery          = `INSERT INTO lots(` + lotInsertFields + `) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	findLotByIDQuery        = `SELECT * FROM lots WHERE id = $1`
+	findLotFields           = `l.id, l.title, l.description, l.min_price, l.price_step, l.status, l.end_at, l.created_at, l.updated_at, u.id, u.first_name, u.last_name, d.id, d.first_name, d.last_name`
+	findLotByIDQuery        = `SELECT ` + findLotFields + ` FROM lots as l INNER JOIN users as u ON l.creator_id = u.id  INNER JOIN  users as d ON l.buyer_id = d.id where l.id =  $1` //inner join
+	lotUpdateFields         = `title = $1, description = $2, min_price = $3, price_step = $4, end_at = $5`
+	updateLotQuery          = `UPDATE lots SET ` + lotUpdateFields + ` WHERE id = $6 AND status = 'created'`
+	//selectAllLotsQuery      = `SELECT `+ findLotFields+ ` FROM lots as l INNER JOIN users as u ON l.creator_id = u.id  INNER JOIN  users as d ON l.buyer_id = d.id`
 )
 
 func init() {
@@ -51,7 +55,15 @@ func scanSession(scanner sqlScanner, s *domains.Session) error {
 func scanLot(scanner sqlScanner, s *domains.Lot) error {
 	return scanner.Scan(&s.ID, &s.Title, &s.Description, &s.MinPrice,
 		&s.PriceStep, &s.Status, &s.EndAt, &s.CreatedAt, &s.UpdatedAt,
-		&s.CreatorID, &s.BuyerID)
+		&s.CreatorID.ID, &s.CreatorID.FirstName, &s.CreatorID.LastName,
+		&s.BuyerID.ID, &s.BuyerID.FirstName, &s.BuyerID.LastName)
+}
+
+func TimeToNullString(t *customTime.CustomTime) sql.NullString {
+	if t == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: time.Time(*t).Format(customTime.CTLayout), Valid: true}
 }
 
 type UsersStorage struct {
@@ -65,6 +77,7 @@ type UsersStorage struct {
 	updateUserStmt         *sql.Stmt
 	insertLotStmt          *sql.Stmt
 	findLotByIDStmt        *sql.Stmt
+	updateLotStmt          *sql.Stmt
 }
 
 func NewUsersStorage(db *sql.DB) (*UsersStorage, error) {
@@ -79,6 +92,7 @@ func NewUsersStorage(db *sql.DB) (*UsersStorage, error) {
 		{Query: updateUserQuery, Dst: &storage.updateUserStmt},
 		{Query: insertLotQuery, Dst: &storage.insertLotStmt},
 		{Query: findLotByIDQuery, Dst: &storage.findLotByIDStmt},
+		{Query: updateLotQuery, Dst: &storage.updateLotStmt},
 	}
 
 	if err := storage.initStatements(statements); err != nil {
@@ -95,13 +109,6 @@ func (s *UsersStorage) FindUserByEmail(email string) (*domains.User, error) {
 		return nil, errors.Wrap(err, "can't check user by email")
 	}
 	return &u, nil
-}
-
-func TimeToNullString(t *customTime.CustomTime) sql.NullString {
-	if t == nil {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: time.Time(*t).Format(customTime.CTLayout), Valid: true}
 }
 
 func (s *UsersStorage) AddUser(u *request.RegUser) error {
@@ -125,6 +132,7 @@ func (s *UsersStorage) AddSession(db *domains.User) (string, error) {
 	}
 	return token, nil
 }
+
 func (s *UsersStorage) FindSessionByToken(token string) (*domains.Session, error) {
 	var ses domains.Session
 	row := s.findSessionByTokenStmt.QueryRow(token)
@@ -169,3 +177,40 @@ func (s *UsersStorage) FindLotByID(id int64) (*domains.Lot, error) {
 	}
 	return &l, nil
 }
+
+func (s *UsersStorage) UpdateLotBD(id int64, l *request.LotToCreateUpdate) error {
+	res, err := s.updateLotStmt.Exec(l.Title, l.Description, l.MinPrice,
+		l.PriceStep, l.EndAt, id)
+	if err != nil {
+		return errors.Wrap(err, "Can't update lot bd")
+	}
+	count, err2 := res.RowsAffected()
+	if err2 != nil {
+		return errors.Wrap(err, "Can't get rows affected")
+	}
+	if count == 0 {
+		return myerr.NotFound
+	}
+	return nil
+}
+
+//func (s *UsersStorage) SelectAllLotsDB() ([]domains.Lot, error) {
+//	rows, err := s.selectAllLotsStmt.Query()
+//	if err != nil {
+//		return nil, errors.Wrap(err, "Can't select lots bd")
+//	}
+//	defer rows.Close()
+//	var lots []domains.Lot
+//	for rows.Next() {
+//		var lot domains.Lot
+//		if err := scanLot(rows, &lot); err != nil {
+//			return nil, errors.Wrap(err, "can't scan lots")
+//		}
+//		lots = append(lots, lot)
+//	}
+//	if err = rows.Err(); err != nil {
+//		return nil, errors.Wrap(err, "rows return error")
+//	}
+//	return lots, nil
+//
+//}

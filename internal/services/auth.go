@@ -59,3 +59,14 @@ func (a *Auth) UpdateUser(u *request.UpdateUser, userID int64) (*domains.User, e
 	}
 	return db, myerr.Success
 }
+
+func (a *Auth) GetUserByID(userID int64) (*domains.User, error) {
+	db, err := a.StmtsStorage.FindUserByID(userID)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, myerr.NotFound
+		}
+		return nil, err
+	}
+	return db, myerr.Success
+}
