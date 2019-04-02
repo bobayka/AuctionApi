@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"github.com/go-chi/chi"
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/internal/postgres"
 	"gitlab.com/bobayka/courseproject/internal/requests"
@@ -12,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 )
 
 var validEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
@@ -30,26 +32,23 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request) error) http.Handler
 	}
 }
 
+func getIDURLParam(r *http.Request) (int64, error) {
+	id := chi.URLParam(r, "id")
+	return strconv.ParseInt(id, 10, 64)
+}
+
 func CheckTokenMiddleware(store *postgres.UsersStorage) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) error {
 			if r.Header.Get("token_type") != "bearer" {
-				resp, err := myerr.ErrMarshal("invalid token type")
-				if err != nil {
-					return errors.Wrap(err, "marshal error")
-				}
-				myerr.Error(w, string(resp), http.StatusBadRequest)
+				jsonRespond(w, "invalid token type", http.StatusBadRequest)
 				return nil
 			}
 			s, err := services.CheckValidToken(r.Header.Get("access_token"), store)
 			if errors.Cause(err) != myerr.Success {
 				switch errors.Cause(err) {
 				case myerr.Unauthorized:
-					resp, errM := myerr.ErrMarshal("unauthorized")
-					if errM != nil {
-						return errors.Wrap(errM, "marshal error")
-					}
-					myerr.Error(w, string(resp), http.StatusUnauthorized)
+					jsonRespond(w, "unauthorized", http.StatusUnauthorized)
 					return nil
 				default:
 					return errors.Wrap(err, "lot cant be create")
@@ -63,18 +62,22 @@ func CheckTokenMiddleware(store *postgres.UsersStorage) func(next http.Handler) 
 	}
 }
 
-func readReqData(r *http.Request, Data interface{}) error {
+func readReqData(r *http.Request, data interface{}) error {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return errors.Wrapf(err, "$read error$")
 	}
-	err = json.Unmarshal(body, Data)
+	err = json.Unmarshal(body, data)
 	if err != nil {
 		return errors.Wrapf(err, "$unmarshal error$")
 	}
 	return nil
 }
 
+func jsonRespond(w http.ResponseWriter, msg string, code int) {
+	resp, _ := myerr.ErrMarshal(msg)
+	myerr.Error(w, string(resp), code)
+}
 func checkEmail(email string) error {
 	if validEmail.FindStringSubmatch(email) == nil {
 		return errors.Wrap(myerr.BadRequest, "$email doesnt match pattern$")

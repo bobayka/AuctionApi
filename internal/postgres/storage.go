@@ -13,22 +13,26 @@ import (
 )
 
 const (
-	findUserByIDQuery       = `SELECT * FROM users WHERE id = $1`
-	userInsertFields        = `first_name, last_name, email, password, birthday`
-	insertUserQuery         = `INSERT INTO users(` + userInsertFields + `) VALUES ($1, $2, $3, $4, $5)`
-	findUserByEmailQuery    = `SELECT * FROM users WHERE email = $1`
-	sessionInsertFields     = `session_id, user_id`
-	sessionInsertQuery      = `INSERT INTO sessions (` + sessionInsertFields + `) VALUES ($1, $2)`
-	findSessionByTokenQuery = `SELECT * FROM sessions WHERE session_id = $1`
-	userUpdateFields        = `first_name = $1, last_name = $2, birthday = $3`
-	updateUserQuery         = `UPDATE users SET ` + userUpdateFields + `WHERE id = $4`
-	lotInsertFields         = `title, description, min_price, price_step, end_at, creator_id, buyer_id`
-	insertLotQuery          = `INSERT INTO lots(` + lotInsertFields + `) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	findLotFields           = `l.id, l.title, l.description, l.min_price, l.price_step, l.status, l.end_at, l.created_at, l.updated_at, u.id, u.first_name, u.last_name, d.id, d.first_name, d.last_name`
-	findLotByIDQuery        = `SELECT ` + findLotFields + ` FROM lots as l INNER JOIN users as u ON l.creator_id = u.id  INNER JOIN  users as d ON l.buyer_id = d.id where l.id =  $1` //inner join
-	lotUpdateFields         = `title = $1, description = $2, min_price = $3, price_step = $4, end_at = $5`
-	updateLotQuery          = `UPDATE lots SET ` + lotUpdateFields + ` WHERE id = $6 AND status = 'created'`
-	//selectAllLotsQuery      = `SELECT `+ findLotFields+ ` FROM lots as l INNER JOIN users as u ON l.creator_id = u.id  INNER JOIN  users as d ON l.buyer_id = d.id`
+	findUserByIDQuery        = `SELECT * FROM users WHERE id = $1`
+	userInsertFields         = `first_name, last_name, email, password, birthday`
+	insertUserQuery          = `INSERT INTO users(` + userInsertFields + `) VALUES ($1, $2, $3, $4, $5)`
+	findUserByEmailQuery     = `SELECT * FROM users WHERE email = $1`
+	sessionInsertFields      = `session_id, user_id`
+	sessionInsertQuery       = `INSERT INTO sessions (` + sessionInsertFields + `) VALUES ($1, $2)`
+	findSessionByTokenQuery  = `SELECT * FROM sessions WHERE session_id = $1`
+	userUpdateFields         = `first_name = $1, last_name = $2, birthday = $3`
+	updateUserQuery          = `UPDATE users SET ` + userUpdateFields + `WHERE id = $4`
+	lotInsertFields          = `title, description, min_price, price_step, end_at, creator_id, buyer_id`
+	insertLotQuery           = `INSERT INTO lots(` + lotInsertFields + `) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	findLotFields            = `l.id, l.title, l.description, l.min_price, l.price_step, l.status, l.end_at, l.created_at, l.updated_at, u.id, u.first_name, u.last_name, d.id, d.first_name, d.last_name`
+	findLotsQuery            = `SELECT ` + findLotFields + ` FROM lots as l INNER JOIN users as u ON l.creator_id = u.id  INNER JOIN  users as d ON l.buyer_id = d.id where ` //inner join
+	findLotByIDQuery         = findLotsQuery + `l.id =  $1`
+	findLotsByCreatorIDQuery = findLotsQuery + `l.creator_id =  $1`
+	findLotsByBuyerIDQuery   = findLotsQuery + `l.buyer_id =  $1`
+	findAllUserLots          = findLotsQuery + `l.buyer_id = $1 OR l.creator_id =  $1`
+	lotUpdateFields          = `title = $1, description = $2, min_price = $3, price_step = $4, end_at = $5`
+	updateLotQuery           = `UPDATE lots SET ` + lotUpdateFields + ` WHERE id = $6 AND status = 'created'`
+	deleteLotQuery           = `UPDATE lots SET deleted_at = NOW() WHERE ID = $1`
 )
 
 func init() {
@@ -69,15 +73,19 @@ func TimeToNullString(t *customTime.CustomTime) sql.NullString {
 type UsersStorage struct {
 	statementStorage
 
-	findUserByIDStmt       *sql.Stmt
-	insertUserStmt         *sql.Stmt
-	findUserByEmailStmt    *sql.Stmt
-	insertSessionStmt      *sql.Stmt
-	findSessionByTokenStmt *sql.Stmt
-	updateUserStmt         *sql.Stmt
-	insertLotStmt          *sql.Stmt
-	findLotByIDStmt        *sql.Stmt
-	updateLotStmt          *sql.Stmt
+	findUserByIDStmt        *sql.Stmt
+	insertUserStmt          *sql.Stmt
+	findUserByEmailStmt     *sql.Stmt
+	insertSessionStmt       *sql.Stmt
+	findSessionByTokenStmt  *sql.Stmt
+	updateUserStmt          *sql.Stmt
+	insertLotStmt           *sql.Stmt
+	findLotByIDStmt         *sql.Stmt
+	updateLotStmt           *sql.Stmt
+	deleteLotStmt           *sql.Stmt
+	findLotsByCreatorIDStmt *sql.Stmt
+	findLotsByBuyerIDStmt   *sql.Stmt
+	findAllUserLotsStmt     *sql.Stmt
 }
 
 func NewUsersStorage(db *sql.DB) (*UsersStorage, error) {
@@ -93,6 +101,10 @@ func NewUsersStorage(db *sql.DB) (*UsersStorage, error) {
 		{Query: insertLotQuery, Dst: &storage.insertLotStmt},
 		{Query: findLotByIDQuery, Dst: &storage.findLotByIDStmt},
 		{Query: updateLotQuery, Dst: &storage.updateLotStmt},
+		{Query: deleteLotQuery, Dst: &storage.deleteLotStmt},
+		{Query: findAllUserLots, Dst: &storage.findAllUserLotsStmt},
+		{Query: findLotsByBuyerIDQuery, Dst: &storage.findLotsByBuyerIDStmt},
+		{Query: findLotsByCreatorIDQuery, Dst: &storage.findLotsByCreatorIDStmt},
 	}
 
 	if err := storage.initStatements(statements); err != nil {
@@ -186,7 +198,7 @@ func (s *UsersStorage) UpdateLotBD(id int64, l *request.LotToCreateUpdate) error
 	}
 	count, err2 := res.RowsAffected()
 	if err2 != nil {
-		return errors.Wrap(err, "Can't get rows affected")
+		return errors.Wrap(err, "Can't get affected rows")
 	}
 	if count == 0 {
 		return myerr.NotFound
@@ -194,23 +206,50 @@ func (s *UsersStorage) UpdateLotBD(id int64, l *request.LotToCreateUpdate) error
 	return nil
 }
 
-//func (s *UsersStorage) SelectAllLotsDB() ([]domains.Lot, error) {
-//	rows, err := s.selectAllLotsStmt.Query()
-//	if err != nil {
-//		return nil, errors.Wrap(err, "Can't select lots bd")
-//	}
-//	defer rows.Close()
-//	var lots []domains.Lot
-//	for rows.Next() {
-//		var lot domains.Lot
-//		if err := scanLot(rows, &lot); err != nil {
-//			return nil, errors.Wrap(err, "can't scan lots")
-//		}
-//		lots = append(lots, lot)
-//	}
-//	if err = rows.Err(); err != nil {
-//		return nil, errors.Wrap(err, "rows return error")
-//	}
-//	return lots, nil
-//
-//}
+func (s *UsersStorage) DeleteLotBD(id int64) error {
+	res, err := s.deleteLotStmt.Exec(id)
+	if err != nil {
+		return errors.Wrap(err, "Can't delete lot bd")
+	}
+	count, err2 := res.RowsAffected()
+	if err2 != nil {
+		return errors.Wrap(err, "Can't get affected rows ")
+	}
+	if count == 0 {
+		return myerr.NotFound
+	}
+	return nil
+}
+
+func (s *UsersStorage) FindUserLotsBD(userID int64, lotsType string) ([]domains.Lot, error) {
+	var rows *sql.Rows
+	var err error //	fmt.Printf("%+v", dbLots)
+	switch lotsType {
+	case "own":
+		rows, err = s.findLotsByCreatorIDStmt.Query(userID)
+	case "buyed":
+		rows, err = s.findLotsByBuyerIDStmt.Query(userID)
+	case "":
+		rows, err = s.findAllUserLotsStmt.Query(userID)
+	default:
+		return nil, errors.New("query param doesnt match") // временнное
+	}
+
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't select lots bd")
+	}
+	defer rows.Close()
+	var lots []domains.Lot
+	for rows.Next() {
+		var lot domains.Lot
+		if err := scanLot(rows, &lot); err != nil {
+			return nil, errors.Wrapf(err, "can't scan lot by id %d", userID)
+		}
+		lots = append(lots, lot)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, errors.Wrap(err, "rows return error")
+	}
+	return lots, nil
+
+}

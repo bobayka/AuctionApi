@@ -53,3 +53,10 @@ func (ls *LotServ) GetLotByID(lotID int64) (*domains.Lot, error) {
 	}
 	return dbLot, myerr.Success
 }
+
+func (ls *LotServ) DeleteLotByID(lotID int64) error {
+	if err := ls.StmtsStorage.DeleteLotBD(lotID); err != nil {
+		return err
+	}
+	return myerr.Success
+}

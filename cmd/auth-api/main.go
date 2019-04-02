@@ -19,10 +19,18 @@ func main() {
 	defer StmtsStorage.Close()
 
 	r := chi.NewRouter()
+
 	auth := NewAuthHandler(StmtsStorage)
-	r = auth.Routes(r)
+	ra := auth.Routes()
+
 	lotServ := NewLotServiceHandler(StmtsStorage)
-	r = lotServ.Routes(r)
-	r.Mount("/v1/auction/", r)
+	rl := lotServ.Routes()
+
+	webServ := NewWebHandler(StmtsStorage)
+	rw := webServ.Routes()
+
+	r.Mount("/v1/auction", ra)
+	r.Mount("/v1/auction/lots", rl)
+	r.Mount("/w", rw)
 	log.Fatal(http.ListenAndServe(":5000", r))
 }

@@ -70,3 +70,14 @@ func (a *Auth) GetUserByID(userID int64) (*domains.User, error) {
 	}
 	return db, myerr.Success
 }
+
+func (a *Auth) GetUserLotsByID(userID int64, lotsType string) ([]domains.Lot, error) {
+	dbLots, err := a.StmtsStorage.FindUserLotsBD(userID, lotsType)
+	if err != nil {
+		return nil, err
+	}
+	if len(dbLots) == 0 {
+		return nil, myerr.NotFound
+	}
+	return dbLots, myerr.Success
+}
