@@ -8,7 +8,7 @@ import (
 type BasicInfo struct {
 	FirstName string                 `json:"first_name"`
 	LastName  string                 `json:"last_name"`
-	Birthday  *customTime.CustomTime `json:"birthday,omitempty"`
+	Birthday  *customtime.CustomTime `json:"birthday,omitempty"`
 }
 
 type GeneralInfo struct {
@@ -67,4 +67,8 @@ func (c *LotToCreateUpdate) GetTokenType() string {
 type Token struct {
 	TokenType   string `json:"token_type"`
 	AccessToken string `json:"access_token"`
+}
+
+type Price struct {
+	Price float64 `json:"price"`
 }

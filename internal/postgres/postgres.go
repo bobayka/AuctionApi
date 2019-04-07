@@ -3,8 +3,13 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
+)
+
+const (
+	UniqueViolation     = "23505"
+	ForeignKeyViolation = "23503"
+	CheckViolation      = "23514"
 )
 
 func PGInit(host string, port int, user string, password string, dbname string) (*sql.DB, error) {

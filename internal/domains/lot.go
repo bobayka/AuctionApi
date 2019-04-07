@@ -8,7 +8,8 @@ import (
 type Lot struct {
 	ID          int64              `json:"id"`
 	Title       string             `json:"title"`
-	Description *string            `json:"description, omitempty"`
+	Description *string            `json:"description,omitempty"`
+	BuyPrice    *float64           `json:"buy_price"`
 	MinPrice    float64            `json:"min_price"`
 	PriceStep   float64            `json:"price_step"`
 	Status      string             `json:"status"`

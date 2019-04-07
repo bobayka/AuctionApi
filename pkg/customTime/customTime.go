@@ -1,4 +1,4 @@
-package customTime
+package customtime
 
 import (
 	"fmt"
