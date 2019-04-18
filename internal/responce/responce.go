@@ -2,8 +2,15 @@ package responce
 
 import (
 	"fmt"
+	"gitlab.com/bobayka/courseproject/internal/domains"
 	"net/http"
 )
+
+type RespLot struct {
+	domains.LotGeneral
+	Creator ShortUSer  `json:"creator"`
+	Buyer   *ShortUSer `json:"buyer,omitempty"`
+}
 
 type ShortUSer struct {
 	ID        int64  `json:"id"`

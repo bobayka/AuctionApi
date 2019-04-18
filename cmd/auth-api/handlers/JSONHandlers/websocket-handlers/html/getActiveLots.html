@@ -1,0 +1,40 @@
+{{define "head"}}<title>Список доступных лотов</title>{{end}}
+{{define "body"}}
+    {{template "wsScript" .}}
+    <h1>Лоты</h1>
+    <style>
+        td {
+            font-family: Verdana, Arial, Helvetica, sans-serif;
+            font-size: 8pt; /* Размер шрифта в пунктах */
+        }
+    </style>
+
+    <div>
+        <table border="1">
+            <tr>
+                <th>ИД лота</th>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Текущая цена</th>
+            </tr>
+            <tr>
+                {{with .Lot}}
+                    <td>{{.ID}}</td>
+                    <td>{{.Title}}</td>
+                    <td>{{.Description}}</td>
+                    <td>
+                        <div id="price_{{.ID}}">{{.BuyPrice}}</div>
+                    </td>
+                {{end}}
+                {{/*                {{if and (ne .UserID .Lot.CreatorID.ID) (ne .UserID .Lot.BuyerID.ID) }}*/}}
+                <td>
+                    <form action="" method="post"
+                          onsubmit="AddPrice('/auction/lots/{{.Lot.ID}}/updprice',{{.Lot.PriceStep}});return false;">
+                        <p><input type="submit" value="+{{.Lot.PriceStep}}"/></p>
+                    </form>
+                </td>
+                {{/*                {{end}}*/}}
+            </tr>
+        </table>
+    </div>
+{{end}}

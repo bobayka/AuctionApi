@@ -15,3 +15,14 @@ func CheckEmail(email string) error {
 	}
 	return nil
 }
+
+var validBearer = regexp.MustCompile("Bearer ([ a-z]*)")
+
+func CheckBearer(bearer string) (string, error) {
+	const token = 1
+	m := validBearer.FindStringSubmatch(bearer)
+	if m == nil {
+		return "", errors.Wrap(myerr.ErrBadRequest, `$bearer doesn't match patern: "Bearer {token}"$`)
+	}
+	return m[token], nil
+}

@@ -18,22 +18,24 @@
             <th>ИД лота</th>
             <th>Название</th>
             <th>Описание</th>
+            <th>Цена</th>
             <th>Минимальная цена</th>
             <th>Шаг</th>
             <th>Статус</th>
             <th>Окончание</th>
             <th>Создатель</th>
+            <th>Покупатель</th>
         </tr>
         {{range $index,$value := . }}
         <tr>
             <td>{{$value.ID}}</td>
             <td>{{$value.Title}}</td>
 			<td>{{$value.Description}}</td>
+            <td>{{$value.BuyPrice}}</td>
 			<td>{{$value.MinPrice}}</td>
 			<td>{{$value.PriceStep}}</td>
 			<td>{{$value.Status}}</td>
 			<td>{{$value.EndAt}}</td>
-            <td>{{$value.CreatorID}}</td>
         </tr>
         {{end}}
     </table>

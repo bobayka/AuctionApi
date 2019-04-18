@@ -54,14 +54,14 @@ type LotToCreateUpdate struct {
 	Title       string    `json:"title"`
 	Description *string   `json:"description"`
 	MinPrice    float64   `json:"min_price"`
-	PriceStep   float64   `json:"price_step"`
+	PriceStep   *float64  `json:"price_step"`
 	EndAt       time.Time `json:"end_at"`
-	TokenType   string    `json:"token_type"`
-	AccessToken string    `json:"access_token"`
 }
 
-func (c *LotToCreateUpdate) GetTokenType() string {
-	return c.TokenType
+type WebLotToCreateUpdate struct {
+	Lot      LotToCreateUpdate
+	BuyPrice string `json:"buy_price"`
+	Status   string `json:"status"`
 }
 
 type Token struct {

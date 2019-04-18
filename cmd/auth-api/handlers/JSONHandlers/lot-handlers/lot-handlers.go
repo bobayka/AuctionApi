@@ -2,7 +2,6 @@ package lothandlers
 
 import (
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/cmd/myerr"
 	"gitlab.com/bobayka/courseproject/cmd/utilities"
@@ -22,20 +21,15 @@ var lotsStatus = map[string]bool{
 }
 
 type LotServiceHandler struct {
-	lotServ services.LotServ
+	lotServ services.LotService
 }
 
 func NewLotServiceHandler(storage *postgres.UsersStorage) *LotServiceHandler {
-	return &LotServiceHandler{services.LotServ{StmtsStorage: storage}}
+	return &LotServiceHandler{services.LotService{StmtsStorage: storage}}
 }
 
 func (l *LotServiceHandler) Routes() *chi.Mux {
 	r := chi.NewRouter()
-
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.AllowContentType("application/json"))
-	r.Use(utility.CheckTokenMiddleware(l.lotServ.StmtsStorage))
 
 	r.Post("/", utility.MakeHandler(l.CreateHandler))
 	r.Put("/{id:[0-9]*}", utility.MakeHandler(l.UpdateHandler))
@@ -101,7 +95,6 @@ func (l *LotServiceHandler) UpdatePriceHandler(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		return errors.Wrap(err, "cant get token user id")
 	}
-
 	dbLot, err := l.lotServ.UpdatePrice(userID, lotID, price.Price)
 	if err != nil {
 		return errors.Wrap(err, "cant update price")

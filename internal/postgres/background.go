@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"gitlab.com/bobayka/courseproject/internal/domains"
 	"log"
 	"time"
 )
@@ -10,18 +9,18 @@ type Background struct {
 	stmt *UsersStorage
 }
 
+func StartDBBackgroundProcesses(stmt *UsersStorage) {
+	back := Background{stmt: stmt}
+	back.FinishEndedLots(time.Second)
+}
 func (b *Background) FinishEndedLots(d time.Duration) {
-	for _ = range time.Tick(d) {
-		var lots []domains.Lot
-		rows, err := b.stmt.findAllLotsStmt.Query()
-		if err != nil {
-			log.Printf("Background: Can't select lots bd: %s", err)
+	go func() {
+		for range time.Tick(d) {
+			_, err := b.stmt.updateFinishedLotsStmt.Exec()
+			if err != nil {
+				log.Printf("Background: Can't update lots bd: %s", err)
+			}
 		}
-		lots, err = rowsLotsToSlice(rows, lots)
-		if err != nil {
-			log.Printf("Background: error in rows lot to slice: %s", err)
-		}
-
-	}
+	}()
 
 }

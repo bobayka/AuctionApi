@@ -1,0 +1,43 @@
+{{define "wsScript"}}
+<script type="text/javascript">
+    function AddPrice(lot, priceStep) {
+        var http = new XMLHttpRequest();
+        http.open("PUT", lot, true);
+
+        http.onload = function () {
+            if (!(http.readyState === 4 && http.status == "200")) {
+                alert("creator or buyer cant buy lot");
+            }
+        }
+        http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        var params = "priceStep=" + priceStep;
+        console.log("send request");
+        http.send(params);
+    }
+
+    function WebSocketPrice() {
+        if ("WebSocket" in window) {
+            var ws = new WebSocket("ws://localhost:5000/auction/ws/{{.Lot.ID}}/buy");
+            ws.onopen = function () {
+                alert("WS is opened");
+            };
+
+            ws.onmessage = function (evt) {
+                var lot = JSON.parse(evt.data);
+                // var isArray  = Array.isArray(received_msg);
+                // if (isArray){
+                //
+                // }
+                console.log(lot);
+                document.getElementById("price_" + lot.id).innerHTML = "<pre>" + lot.buy_price + "</pre>";
+            };
+
+            ws.onclose = function () {
+                alert("WS is closed");
+            };
+        } else {
+            alert("WebSocket is not supported in your browser");
+        }
+    }
+</script>
+{{end}}

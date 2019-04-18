@@ -3,7 +3,6 @@ package utility
 import (
 	"context"
 	"github.com/pkg/errors"
-	"gitlab.com/bobayka/courseproject/cmd/myerr"
 	"gitlab.com/bobayka/courseproject/internal/postgres"
 	"gitlab.com/bobayka/courseproject/internal/services"
 	"net/http"
@@ -12,10 +11,38 @@ import (
 func CheckTokenMiddleware(store *postgres.UsersStorage) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) error {
-			if r.Header.Get("token_type") != "bearer" {
-				return errors.Wrap(myerr.ErrBadRequest, "$invalid token type$")
+			token := r.Header.Get("Authorization")
+			token, err := CheckBearer(token)
+			if err != nil {
+				return errors.Wrap(err, "doesn't valid token")
 			}
-			s, err := services.CheckValidToken(r.Header.Get("access_token"), store)
+			s, err := services.CheckValidToken(token, store)
+			if err != nil {
+				return errors.Wrap(err, "cant check valid token")
+			}
+			ctx := context.WithValue(r.Context(), UserIDKey, s.UserID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return nil
+		}
+		return MakeHandler(fn)
+	}
+}
+
+func CheckCookieMiddleware(store *postgres.UsersStorage) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) error {
+			token, err := r.Cookie("Authorization")
+			if err != nil {
+				switch err {
+				case http.ErrNoCookie:
+					http.Redirect(w, r, "http://localhost:5000/signin", http.StatusFound)
+					return nil
+
+				default:
+					return errors.Wrap(err, "Cant read cookie")
+				}
+			}
+			s, err := services.CheckValidToken(token.Value, store)
 			if err != nil {
 				return errors.Wrap(err, "cant check valid token")
 			}

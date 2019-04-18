@@ -1,0 +1,45 @@
+{{define "head"}}<title>Список доступных лотов</title>{{end}}
+{{define "body"}}
+    <h1>Лоты</h1>
+    <!--<p>
+        <a href="auction/lots/add" >Добавить лот</a>
+    </p>
+    -->
+    <style>
+        td {
+            font-family: Verdana, Arial, Helvetica, sans-serif;
+            font-size: 8pt; /* Размер шрифта в пунктах */
+        }
+    </style>
+
+    <div>
+        <table border="1">
+            <tr>
+                <th>ИД лота</th>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Цена</th>
+                <th>Минимальная цена</th>
+                <th>Шаг</th>
+                <th>Статус</th>
+                <th>Окончание</th>
+                <th>Создатель</th>
+                <th>Покупатель</th>
+            </tr>
+            {{range $index,$value := . }}
+                <tr id="lot_{$value.id}}">
+                    {{with $value}}
+                        <td>{{.ID}}</td>
+                        <td>{{.Title}}</td>
+                        <td>{{.Description}}</td>
+                        <td>{{.BuyPrice}}</td>
+                        <td>{{.MinPrice}}</td>
+                        <td>{{.PriceStep}}</td>
+                        <td>{{.Status}}</td>
+                        <td>{{.EndAt}}</td>
+                    {{end}}
+                </tr>
+            {{end}}
+        </table>
+    </div>
+{{end}}

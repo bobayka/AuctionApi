@@ -6,7 +6,8 @@ import (
 	"gitlab.com/bobayka/courseproject/cmd/myerr"
 	"gitlab.com/bobayka/courseproject/internal/domains"
 	"gitlab.com/bobayka/courseproject/internal/requests"
-	customtime "gitlab.com/bobayka/courseproject/pkg/customTime"
+	"gitlab.com/bobayka/courseproject/internal/responce"
+	"gitlab.com/bobayka/courseproject/pkg/customTime"
 	"golang.org/x/crypto/bcrypt"
 	"math/rand"
 	"time"
@@ -14,28 +15,33 @@ import (
 
 //nolint: gosec
 const (
-	findUserByIDQuery        = `SELECT * FROM users WHERE id = $1`
-	userInsertFields         = `first_name, last_name, email, password, birthday`
-	insertUserQuery          = `INSERT INTO users(` + userInsertFields + `) VALUES ($1, $2, $3, $4, $5)`
-	findUserByEmailQuery     = `SELECT * FROM users WHERE email = $1`
-	sessionInsertFields      = `session_id, user_id`
-	sessionInsertQuery       = `INSERT INTO sessions (` + sessionInsertFields + `) VALUES ($1, $2)`
-	findSessionByTokenQuery  = `SELECT * FROM sessions WHERE session_id = $1`
-	userUpdateFields         = `first_name = $1, last_name = $2, birthday = $3 `
-	updateUserQuery          = `UPDATE users SET ` + userUpdateFields + `WHERE id = $4`
-	lotInsertFields          = `title, description, min_price, price_step, end_at, creator_id, buyer_id`
-	insertLotQuery           = `INSERT INTO lots(` + lotInsertFields + `) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	findLotFields            = `l.id, l.title, l.description, l.buy_price, l.min_price, l.price_step, l.status, l.end_at, l.created_at, l.updated_at, u.id, u.first_name, u.last_name, d.id, d.first_name, d.last_name`
-	findLotsQuery            = `SELECT ` + findLotFields + ` FROM lots as l INNER JOIN users as u ON l.creator_id = u.id  INNER JOIN  users as d ON l.buyer_id = d.id ` //inner join
-	findLotByStatusQuery     = findLotsQuery + `where l.status = $1`
-	findLotByIDQuery         = findLotsQuery + `where l.id =  $1`
-	findLotsByCreatorIDQuery = findLotsQuery + `where l.creator_id =  $1`
-	findLotsByBuyerIDQuery   = findLotsQuery + `where l.buyer_id =  $1`
-	findAllUserLots          = findLotsQuery + `where l.buyer_id = $1 OR l.creator_id =  $1`
-	lotUpdateFields          = `title = $1, description = $2, min_price = $3, price_step = $4, end_at = $5`
+	findUserQuery           = `SELECT * FROM users WHERE `
+	findUserByIDQuery       = findUserQuery + `id = $1`
+	findShortUserByIDQuery  = `SELECT id, first_name, last_name FROM users WHERE id = $1`
+	userInsertFields        = `first_name, last_name, email, password, birthday`
+	insertUserQuery         = `INSERT INTO users(` + userInsertFields + `) VALUES ($1, $2, $3, $4, $5)`
+	findUserByEmailQuery    = findUserQuery + `email = $1`
+	sessionInsertFields     = `session_id, user_id`
+	sessionInsertQuery      = `INSERT INTO sessions (` + sessionInsertFields + `) VALUES ($1, $2)`
+	findSessionByTokenQuery = `SELECT * FROM sessions WHERE session_id = $1`
+	userUpdateFields        = `first_name = $1, last_name = $2, birthday = $3, updated_at = NOW() `
+	updateUserQuery         = `UPDATE users SET ` + userUpdateFields + `WHERE id = $4`
+	lotInsertFields         = `title, description, min_price, price_step, end_at, creator_id`
+	insertLotQuery          = `INSERT INTO lots(` + lotInsertFields + `) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	//findLotFields           = `l.id, l.title, l.description, l.buy_price, l.min_price, l.price_step, l.status, l.end_at, l.created_at, l.updated_at, u.id, u.first_name, u.last_name, d.id, d.first_name, d.last_name`
+	//findLotsQuery            = `SELECT ` + findLotFields + ` FROM lots as l INNER JOIN users as u ON l.creator_id = u.id  LEFT JOIN  users as d ON l.buyer_id = d.id ` //inner join
+	findLotFields            = `id, title, description, buy_price, min_price, price_step, status, end_at, created_at, updated_at, creator_id, buyer_id`
+	findLotsQuery            = `SELECT ` + findLotFields + ` FROM lots `
+	findLotByStatusQuery     = findLotsQuery + `where status = $1`
+	findLotByIDQuery         = findLotsQuery + `where id =  $1`
+	findLotsByCreatorIDQuery = findLotsQuery + `where creator_id =  $1`
+	findLotsByBuyerIDQuery   = findLotsQuery + `where buyer_id =  $1`
+	findAllUserLots          = findLotsQuery + `where buyer_id = $1 OR creator_id =  $1`
+	lotUpdateFields          = `title = $1, description = $2, min_price = $3, price_step = $4, end_at = $5, updated_at = NOW()`
 	updateLotQuery           = `UPDATE lots SET ` + lotUpdateFields + ` WHERE id = $6 AND status = 'created'`
 	deleteLotQuery           = `UPDATE lots SET deleted_at = NOW() WHERE ID = $1`
-	updateLotPriceQuery      = `UPDATE lots SET buy_price = $1, buyer_id = $2 WHERE id = $3`
+	updateLotPriceQuery      = `UPDATE lots SET buy_price = $1, buyer_id = $2, updated_at = NOW() WHERE id = $3`
+	updateFinishedLotsQuery  = `UPDATE lots SET status = 'finished', updated_at = NOW() WHERE NOW()>end_at`
 )
 
 func RandomString(len int) string {
@@ -46,13 +52,13 @@ func RandomString(len int) string {
 	return string(bytes)
 }
 
-func rowsLotsToSlice(rows *sql.Rows, lots []domains.Lot) ([]domains.Lot, error) {
+func rowsLotsToSlice(rows *sql.Rows, lots []*domains.Lot) ([]*domains.Lot, error) {
 	for rows.Next() {
 		var lot domains.Lot
 		if err := scanLot(rows, &lot); err != nil {
 			return nil, errors.Wrapf(err, "can't scan lot")
 		}
-		lots = append(lots, lot)
+		lots = append(lots, &lot)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, errors.Wrap(err, "rows return error")
@@ -60,10 +66,13 @@ func rowsLotsToSlice(rows *sql.Rows, lots []domains.Lot) ([]domains.Lot, error) 
 	return lots, nil
 }
 
+func scanShortUser(scanner sqlScanner, u *responce.ShortUSer) error {
+	return scanner.Scan(&u.ID, &u.FirstName, &u.LastName)
+}
+
 func scanUser(scanner sqlScanner, u *domains.User) error {
 	return scanner.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.Password, &u.Birthday,
-		&u.CreatedAt, &u.UpdatedAt,
-	)
+		&u.CreatedAt, &u.UpdatedAt)
 }
 func scanSession(scanner sqlScanner, s *domains.Session) error {
 	return scanner.Scan(&s.SessionID, &s.UserID, &s.CreatedAt, &s.ValidUntil)
@@ -72,8 +81,7 @@ func scanSession(scanner sqlScanner, s *domains.Session) error {
 func scanLot(scanner sqlScanner, s *domains.Lot) error {
 	return scanner.Scan(&s.ID, &s.Title, &s.Description, &s.BuyPrice, &s.MinPrice,
 		&s.PriceStep, &s.Status, &s.EndAt, &s.CreatedAt, &s.UpdatedAt,
-		&s.CreatorID.ID, &s.CreatorID.FirstName, &s.CreatorID.LastName,
-		&s.BuyerID.ID, &s.BuyerID.FirstName, &s.BuyerID.LastName)
+		&s.CreatorID, &s.BuyerID)
 }
 
 func TimeToNullString(t *customtime.CustomTime) sql.NullString {
@@ -87,6 +95,7 @@ type UsersStorage struct {
 	statementStorage
 
 	findUserByIDStmt        *sql.Stmt
+	findShortUserByIDStmt   *sql.Stmt
 	insertUserStmt          *sql.Stmt
 	findUserByEmailStmt     *sql.Stmt
 	insertSessionStmt       *sql.Stmt
@@ -102,6 +111,7 @@ type UsersStorage struct {
 	findLotByStatusStmt     *sql.Stmt
 	findAllLotsStmt         *sql.Stmt
 	updateLotPriceStmt      *sql.Stmt
+	updateFinishedLotsStmt  *sql.Stmt
 }
 
 func NewUsersStorage(db *sql.DB) (*UsersStorage, error) {
@@ -110,6 +120,7 @@ func NewUsersStorage(db *sql.DB) (*UsersStorage, error) {
 	statements := []stmt{
 		{Query: insertUserQuery, Dst: &storage.insertUserStmt},
 		{Query: findUserByEmailQuery, Dst: &storage.findUserByEmailStmt},
+		{Query: findShortUserByIDQuery, Dst: &storage.findShortUserByIDStmt},
 		{Query: sessionInsertQuery, Dst: &storage.insertSessionStmt},
 		{Query: findSessionByTokenQuery, Dst: &storage.findSessionByTokenStmt},
 		{Query: findUserByIDQuery, Dst: &storage.findUserByIDStmt},
@@ -124,6 +135,7 @@ func NewUsersStorage(db *sql.DB) (*UsersStorage, error) {
 		{Query: findLotsByCreatorIDQuery, Dst: &storage.findLotsByCreatorIDStmt},
 		{Query: findLotByStatusQuery, Dst: &storage.findLotByStatusStmt},
 		{Query: updateLotPriceQuery, Dst: &storage.updateLotPriceStmt},
+		{Query: updateFinishedLotsQuery, Dst: &storage.updateFinishedLotsStmt},
 	}
 
 	if err := storage.initStatements(statements); err != nil {
@@ -173,6 +185,15 @@ func (s *UsersStorage) FindSessionByToken(token string) (*domains.Session, error
 	return &ses, nil
 }
 
+func (s *UsersStorage) FindShortUserByID(id int64) (*responce.ShortUSer, error) {
+	var u responce.ShortUSer
+	row := s.findShortUserByIDStmt.QueryRow(id)
+	if err := scanShortUser(row, &u); err != nil {
+		return nil, errors.Wrapf(err, "can't scan ShortUser by id %d", id)
+	}
+	return &u, nil
+}
+
 func (s *UsersStorage) FindUserByID(id int64) (*domains.User, error) {
 	var u domains.User
 	row := s.findUserByIDStmt.QueryRow(id)
@@ -193,7 +214,7 @@ func (s *UsersStorage) UpdateUserBD(id int64, u *request.UpdateUser) error {
 func (s *UsersStorage) InsertLot(userID int64, l *request.LotToCreateUpdate) (int64, error) {
 	var LotID int64
 	err := s.insertLotStmt.QueryRow(l.Title, l.Description, l.MinPrice,
-		l.PriceStep, l.EndAt, userID, userID).Scan(&LotID)
+		l.PriceStep, l.EndAt, userID).Scan(&LotID)
 	if err != nil {
 		return 0, errors.Wrap(err, "Can't insert lot in bd")
 	}
@@ -240,7 +261,7 @@ func (s *UsersStorage) DeleteLotBD(id int64) error {
 	return nil
 }
 
-func (s *UsersStorage) FindUserLotsBD(userID int64, lotsType string) ([]domains.Lot, error) {
+func (s *UsersStorage) FindUserLotsBD(userID int64, lotsType string) ([]*domains.Lot, error) {
 	var rows *sql.Rows
 	var err error //	fmt.Printf("%+v", dbLots)
 	switch lotsType {
@@ -258,7 +279,7 @@ func (s *UsersStorage) FindUserLotsBD(userID int64, lotsType string) ([]domains.
 		return nil, errors.Wrap(err, "Can't select lots bd")
 	}
 	defer rows.Close()
-	var lots []domains.Lot
+	var lots []*domains.Lot
 	lots, err = rowsLotsToSlice(rows, lots)
 	if err != nil {
 		return nil, errors.Wrap(err, "error in rows lot to slice")
@@ -267,7 +288,7 @@ func (s *UsersStorage) FindUserLotsBD(userID int64, lotsType string) ([]domains.
 
 }
 
-func (s *UsersStorage) FindAllUserLotsBD(status string) ([]domains.Lot, error) {
+func (s *UsersStorage) FindAllUserLotsBD(status string) ([]*domains.Lot, error) {
 	var rows *sql.Rows
 	var err error //	fmt.Printf("%+v", dbLots)
 	if status != "" {
@@ -279,7 +300,7 @@ func (s *UsersStorage) FindAllUserLotsBD(status string) ([]domains.Lot, error) {
 		return nil, errors.Wrap(err, "Can't select lots bd")
 	}
 	defer rows.Close()
-	var lots []domains.Lot
+	var lots []*domains.Lot
 	lots, err = rowsLotsToSlice(rows, lots)
 	if err != nil {
 		return nil, errors.Wrap(err, "error in rows lot to slice")

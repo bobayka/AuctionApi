@@ -1,17 +1,14 @@
 package main
 
 import (
-	"github.com/go-chi/chi"
 	_ "github.com/lib/pq"
-	"math/rand"
-	"time"
-
 	"gitlab.com/bobayka/courseproject/cmd/auth-api"
-	"gitlab.com/bobayka/courseproject/cmd/lot-api"
-	"gitlab.com/bobayka/courseproject/cmd/web-api"
 	"gitlab.com/bobayka/courseproject/internal/postgres"
 	"log"
+	"math/rand"
 	"net/http"
+	_ "net/http/pprof"
+	"time"
 )
 
 func init() {
@@ -29,20 +26,12 @@ func main() {
 	}
 	defer StmtsStorage.Close()
 
-	r := chi.NewRouter()
+	postgres.StartDBBackgroundProcesses(StmtsStorage)
 
-	auth := authhandlers.NewAuthHandler(StmtsStorage)
-	ra := auth.Routes()
-
-	lotServ := lothandlers.NewLotServiceHandler(StmtsStorage)
-	rl := lotServ.Routes()
-
-	webServ := webapi.NewWebHandler(StmtsStorage)
-	rw := webServ.Routes()
-
-	r.Mount("/v1/auction", ra)
-	r.Mount("/v1/auction/lots", rl)
-	r.Mount("/w", rw)
-
+	auth := authapi.NewAuthApi(StmtsStorage)
+	r := auth.Routes()
+	go func() {
+		log.Println(http.ListenAndServe("localhost:8080", nil))
+	}()
 	log.Fatal(http.ListenAndServe(":5000", r))
 }
