@@ -26,22 +26,18 @@
                 <th>Создатель</th>
                 <th>Покупатель</th>
             </tr>
-            {{range $index,$value := . }}
-                <tr>
-                    {{with $value}}
-                        <td>{{.ID}}</td>
-                        <td>{{.Title}}</td>
-                        <td>{{.Description}}</td>
-                        <td>{{.BuyPrice}}</td>
-                        <td>{{.MinPrice}}</td>
-                        <td>{{.PriceStep}}</td>
-                        <td>{{.Status}}</td>
-                        <td>{{.EndAt}}</td>
-                        <td>{{.Creator}}</td>
-                        <td>{{.Buyer}}</td>
-                    {{end}}
-                </tr>
-            {{end}}
+            <tr>
+                <td>{{.ID}}</td>
+                <td>{{.Title}}</td>
+                <td>{{or .Description ""}}</td>
+                <td>{{or .BuyPrice ""}}</td>
+                <td>{{.MinPrice}}</td>
+                <td>{{.PriceStep}}</td>
+                <td>{{.Status}}</td>
+                <td>{{.EndAt}}</td>
+                <td>{{.Creator}}</td>
+                <td>{{or .Buyer ""}}</td>
+            </tr>
         </table>
     </div>
 {{end}}

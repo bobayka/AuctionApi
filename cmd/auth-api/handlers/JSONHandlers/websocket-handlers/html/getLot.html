@@ -1,6 +1,6 @@
 {{define "head"}}<title>Список доступных лотов</title>{{end}}
 {{define "body"}}
-    {{template "wsScript" .}}
+    {{template "wsBuyLotScript" .}}
     <h1>Лоты</h1>
     <style>
         td {
@@ -15,22 +15,27 @@
                 <th>ИД лота</th>
                 <th>Название</th>
                 <th>Описание</th>
+                <th>Статус</th>
+                <th>Мин. цена</th>
                 <th>Текущая цена</th>
+                <th>Шаг</th>
             </tr>
             <tr>
-                {{with .Lot}}
-                    <td>{{.ID}}</td>
-                    <td>{{.Title}}</td>
-                    <td>{{.Description}}</td>
-                    <td>
-                        <div id="price_{{.ID}}">{{.BuyPrice}}</div>
-                    </td>
-                {{end}}
+                <td>{{.ID}}</td>
+                <td>{{.Title}}</td>
+                <td>{{.Description}}</td>
+                <td>
+                    <div id="status_{{.ID}}">{{.Status}}</div>
+                </td>
+                <td>{{.MinPrice}}</td>
+                <td>
+                    <div id="price_{{.ID}}">{{.BuyPrice}}</div>
+                </td>
                 {{/*                {{if and (ne .UserID .Lot.CreatorID.ID) (ne .UserID .Lot.BuyerID.ID) }}*/}}
                 <td>
                     <form action="" method="post"
-                          onsubmit="AddPrice('/auction/lots/{{.Lot.ID}}/updprice',{{.Lot.PriceStep}});return false;">
-                        <p><input type="submit" value="+{{.Lot.PriceStep}}"/></p>
+                          onsubmit="AddPrice('/auction/lots/{{.ID}}/updprice',{{.PriceStep}});return false;">
+                        <p><input type="submit" value="+{{.PriceStep}}"/></p>
                     </form>
                 </td>
                 {{/*                {{end}}*/}}

@@ -4,13 +4,15 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"gitlab.com/bobayka/courseproject/cmd/auth-api/handlers/HTMLHandlers/auth-handlers"
+	"gitlab.com/bobayka/courseproject/cmd/auth-api/handlers/HTMLHandlers/lot-handlers"
 	"gitlab.com/bobayka/courseproject/cmd/auth-api/handlers/HTMLHandlers/user-handlers"
 	"gitlab.com/bobayka/courseproject/cmd/auth-api/handlers/JSONHandlers/auth-handlers"
 	"gitlab.com/bobayka/courseproject/cmd/auth-api/handlers/JSONHandlers/lot-handlers"
 	"gitlab.com/bobayka/courseproject/cmd/auth-api/handlers/JSONHandlers/user-handlers"
 	"gitlab.com/bobayka/courseproject/cmd/auth-api/handlers/JSONHandlers/websocket-handlers"
-	utility "gitlab.com/bobayka/courseproject/cmd/utilities"
+	"gitlab.com/bobayka/courseproject/cmd/utilities"
 	"gitlab.com/bobayka/courseproject/internal/postgres"
+	"gitlab.com/bobayka/courseproject/internal/postgres/PGBackground"
 )
 
 type authApi struct {
@@ -20,6 +22,7 @@ type authApi struct {
 	user    *userhandlers.UserHandler
 	webAuth *authWeb.WebAuthHandler
 	webUser *userWeb.WebUserHandler
+	webLot  *lotWeb.WebLotHandler
 	wsLot   *websocket_handlers.LotWSHandler
 }
 
@@ -27,10 +30,12 @@ func NewAuthApi(storage *postgres.UsersStorage) *authApi {
 	auth := authhandlers.NewAuthHandler(storage)
 	lot := lothandlers.NewLotServiceHandler(storage)
 	user := userhandlers.NewUserHandlers(storage)
-	webLot := userWeb.NewWebUserHandler(storage)
+	webUser := userWeb.NewWebUserHandler(storage)
+	webLot := lotWeb.NewWebLotHandler(storage)
 	webAuth := authWeb.NewWebAuthHandler(storage)
 	wsLot := websocket_handlers.NewLotWSHandler(storage)
-	return &authApi{storage: storage, auth: auth, lot: lot, user: user, webUser: webLot, webAuth: webAuth, wsLot: wsLot}
+	PGBackground.StartDBBackgroundProcesses(storage, wsLot.Hub)
+	return &authApi{storage: storage, auth: auth, lot: lot, user: user, webUser: webUser, webLot: webLot, webAuth: webAuth, wsLot: wsLot}
 }
 
 func (a *authApi) Routes() *chi.Mux {
@@ -43,7 +48,9 @@ func (a *authApi) Routes() *chi.Mux {
 	lotRouter := a.lot.Routes()
 	webUserRouter := a.webUser.Routes()
 	webAuthRouter := a.webAuth.Routes()
+	webLotRouter := a.webLot.Routes()
 	wsLotsRouter := a.wsLot.Routes()
+
 	router.Group(func(r chi.Router) {
 		r.Use(middleware.AllowContentType("application/json"))
 		r.Mount("/v1/auction", authRouter)
@@ -57,6 +64,7 @@ func (a *authApi) Routes() *chi.Mux {
 	router.Group(func(r chi.Router) {
 		r.Use(utility.CheckCookieMiddleware(a.storage))
 		r.Mount("/w/auction/user", webUserRouter)
+		r.Mount("/w/auction/lots", webLotRouter)
 		r.Mount("/auction", wsLotsRouter)
 	})
 	return router

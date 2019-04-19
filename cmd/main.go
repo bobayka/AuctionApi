@@ -26,8 +26,6 @@ func main() {
 	}
 	defer StmtsStorage.Close()
 
-	postgres.StartDBBackgroundProcesses(StmtsStorage)
-
 	auth := authapi.NewAuthApi(StmtsStorage)
 	r := auth.Routes()
 	go func() {

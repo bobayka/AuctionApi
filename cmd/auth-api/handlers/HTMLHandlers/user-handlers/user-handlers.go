@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-const baseHTMLDirectory = "cmd/auth-api/handlers/HTMLHandlers/user-handlers/html/"
+const baseHTMLDirectory = "cmd/auth-api/handlers/HTMLHandlers/"
 
 type WebUserHandler struct {
 	webUser services.UserService
@@ -20,7 +20,7 @@ type WebUserHandler struct {
 
 func NewWebUserHandler(storage *postgres.UsersStorage) *WebUserHandler {
 	templ := HTMLHandlers.Templates{
-		"index": template.Must(template.ParseFiles(baseHTMLDirectory+"index.html", baseHTMLDirectory+"base.html")),
+		"index": template.Must(template.ParseFiles(baseHTMLDirectory+"user-handlers/html/index.html", baseHTMLDirectory+"base.html")),
 	}
 	return &WebUserHandler{webUser: services.UserService{StmtsStorage: storage}, templs: templ}
 }

@@ -12,20 +12,20 @@ import (
 )
 
 // nolint: gochecknoglobals
-var lotsStatus = map[string]bool{
-	"inactive": true,
-	"created":  true,
-	"active":   true,
-	"finished": true,
-	"":         true,
-}
 
 type LotServiceHandler struct {
-	lotServ services.LotService
+	LotsStatus map[string]bool
+	LotServ    services.LotService
 }
 
 func NewLotServiceHandler(storage *postgres.UsersStorage) *LotServiceHandler {
-	return &LotServiceHandler{services.LotService{StmtsStorage: storage}}
+	var lotsStatus = map[string]bool{
+		"created":  true,
+		"active":   true,
+		"finished": true,
+		"":         true,
+	}
+	return &LotServiceHandler{LotsStatus: lotsStatus, LotServ: services.LotService{StmtsStorage: storage}}
 }
 
 func (l *LotServiceHandler) Routes() *chi.Mux {
@@ -50,7 +50,7 @@ func (l *LotServiceHandler) CreateHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return errors.Wrap(err, "cant get token user id")
 	}
-	dbLot, err := l.lotServ.CreateLot(&lot, userID)
+	dbLot, err := l.LotServ.CreateLot(&lot, userID)
 	if err != nil {
 		return errors.Wrap(err, "lot cant be create")
 	}
@@ -70,7 +70,7 @@ func (l *LotServiceHandler) UpdateHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return errors.Wrap(err, "Wrong Lot ID")
 	}
-	dbLot, err := l.lotServ.UpdateLot(&lot, lotID)
+	dbLot, err := l.LotServ.UpdateLot(&lot, lotID)
 	if err != nil {
 		return errors.Wrap(err, "lot cant be update")
 	}
@@ -95,7 +95,7 @@ func (l *LotServiceHandler) UpdatePriceHandler(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		return errors.Wrap(err, "cant get token user id")
 	}
-	dbLot, err := l.lotServ.UpdatePrice(userID, lotID, price.Price)
+	dbLot, err := l.LotServ.UpdatePrice(userID, lotID, price.Price)
 	if err != nil {
 		return errors.Wrap(err, "cant update price")
 	}
@@ -111,7 +111,7 @@ func (l *LotServiceHandler) GetHandler(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		return errors.Wrap(err, "Wrong Lot ID")
 	}
-	dbLot, err := l.lotServ.GetLotByID(lotID)
+	dbLot, err := l.LotServ.GetLotByID(lotID)
 	if err != nil {
 		return errors.Wrap(err, "lot cant be get")
 	}
@@ -125,10 +125,10 @@ func (l *LotServiceHandler) GetHandler(w http.ResponseWriter, r *http.Request) e
 
 func (l *LotServiceHandler) GetAllHandler(w http.ResponseWriter, r *http.Request) error {
 	lotStat := r.URL.Query().Get("status")
-	if !lotsStatus[lotStat] {
+	if !l.LotsStatus[lotStat] {
 		return errors.Wrap(myerr.ErrBadRequest, "$Wrong lot status$")
 	}
-	dbLots, err := l.lotServ.GetAllLots(lotStat)
+	dbLots, err := l.LotServ.GetAllLots(lotStat)
 	if err != nil {
 		return errors.Wrap(err, "cant get all lots")
 	}
@@ -144,7 +144,7 @@ func (l *LotServiceHandler) DeleteHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return errors.Wrap(err, "Wrong Lot ID")
 	}
-	err = l.lotServ.DeleteLotByID(lotID)
+	err = l.LotServ.DeleteLotByID(lotID)
 	if err != nil {
 		return errors.Wrap(err, "lot cant be get")
 	}

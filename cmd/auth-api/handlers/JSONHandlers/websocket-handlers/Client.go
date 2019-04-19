@@ -38,7 +38,7 @@ type Client struct {
 	conn *websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send chan broadcastWithID
+	send chan BroadcastWithID
 }
 
 // writePump pumps messages from the hub to the websocket connection.
@@ -57,7 +57,7 @@ func (c *Client) writePump() {
 			return
 		}
 
-		if err := c.conn.WriteMessage(websocket.TextMessage, message.data); err != nil {
+		if err := c.conn.WriteMessage(websocket.TextMessage, message.Data); err != nil {
 			close(c.send)
 			delete(c.hub.clients[c.lotID], c)
 			fmt.Printf("removed client from lot id: %d , total clients %d\n", c.lotID, len(c.hub.clients[c.lotID]))

@@ -9,6 +9,7 @@ import (
 	"gitlab.com/bobayka/courseproject/internal/responce"
 	"gitlab.com/bobayka/courseproject/pkg/customTime"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -37,11 +38,11 @@ const (
 	findLotsByCreatorIDQuery = findLotsQuery + `where creator_id =  $1`
 	findLotsByBuyerIDQuery   = findLotsQuery + `where buyer_id =  $1`
 	findAllUserLots          = findLotsQuery + `where buyer_id = $1 OR creator_id =  $1`
-	lotUpdateFields          = `title = $1, description = $2, min_price = $3, price_step = $4, end_at = $5, updated_at = NOW()`
-	updateLotQuery           = `UPDATE lots SET ` + lotUpdateFields + ` WHERE id = $6 AND status = 'created'`
+	lotUpdateFields          = `title = $1, description = $2, min_price = $3, price_step = $4, end_at = $5, status = $6 ,updated_at = NOW()`
+	updateLotQuery           = `UPDATE lots SET ` + lotUpdateFields + ` WHERE id = $7 AND status = 'created'`
 	deleteLotQuery           = `UPDATE lots SET deleted_at = NOW() WHERE ID = $1`
 	updateLotPriceQuery      = `UPDATE lots SET buy_price = $1, buyer_id = $2, updated_at = NOW() WHERE id = $3`
-	updateFinishedLotsQuery  = `UPDATE lots SET status = 'finished', updated_at = NOW() WHERE NOW()>end_at`
+	updateFinishedLotsQuery  = `UPDATE lots SET status = 'finished', updated_at = NOW() WHERE NOW()>end_at and NOT status='finished' RETURNING id`
 )
 
 func RandomString(len int) string {
@@ -83,7 +84,6 @@ func scanLot(scanner sqlScanner, s *domains.Lot) error {
 		&s.PriceStep, &s.Status, &s.EndAt, &s.CreatedAt, &s.UpdatedAt,
 		&s.CreatorID, &s.BuyerID)
 }
-
 func TimeToNullString(t *customtime.CustomTime) sql.NullString {
 	if t == nil {
 		return sql.NullString{}
@@ -232,7 +232,7 @@ func (s *UsersStorage) FindLotByID(id int64) (*domains.Lot, error) {
 
 func (s *UsersStorage) UpdateLotBD(id int64, l *request.LotToCreateUpdate) error {
 	res, err := s.updateLotStmt.Exec(l.Title, l.Description, l.MinPrice,
-		l.PriceStep, l.EndAt, id)
+		l.PriceStep, l.EndAt, l.Status, id)
 	if err != nil {
 		return errors.Wrap(err, "Can't update lot bd")
 	}
@@ -288,7 +288,51 @@ func (s *UsersStorage) FindUserLotsBD(userID int64, lotsType string) ([]*domains
 
 }
 
-func (s *UsersStorage) FindAllUserLotsBD(status string) ([]*domains.Lot, error) {
+func (s *UsersStorage) ConvertLotToRespLot(dbLot *domains.Lot) (*responce.RespLot, error) {
+
+	creator, err := s.FindShortUserByID(dbLot.CreatorID)
+	if err != nil {
+		return nil, err
+	}
+	var buyer *responce.ShortUSer
+	if dbLot.BuyerID != nil {
+		buyer, err = s.FindShortUserByID(*dbLot.BuyerID)
+	}
+	return &responce.RespLot{LotGeneral: dbLot.LotGeneral, Creator: *creator, Buyer: buyer}, nil
+}
+
+func (s *UsersStorage) BackgroundUpdateLotsBD() ([]*responce.RespLot, error) {
+	rows, err := s.updateFinishedLotsStmt.Query()
+	if err != nil {
+		log.Printf("Can't update lots bd: %s", err)
+	}
+	defer rows.Close()
+	var lotsID []*int64
+	for rows.Next() {
+		var lotID int64
+		if err := rows.Scan(&lotID); err != nil {
+			return nil, errors.Wrapf(err, "can't scan lot")
+		}
+		lotsID = append(lotsID, &lotID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrap(err, "rows return error")
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "error in rows lot to slice")
+	}
+	var respLots []*responce.RespLot
+	for _, v := range lotsID {
+		dbLot, err := s.FindLotByID(*v)
+		respLot, err := s.ConvertLotToRespLot(dbLot)
+		if err != nil {
+			return nil, err
+		}
+		respLots = append(respLots, respLot)
+	}
+	return respLots, nil
+}
+func (s *UsersStorage) FindAllLotsBD(status string) ([]*domains.Lot, error) {
 	var rows *sql.Rows
 	var err error //	fmt.Printf("%+v", dbLots)
 	if status != "" {

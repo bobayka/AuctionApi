@@ -46,7 +46,7 @@ func (a *UserService) GetUserLotsByID(userID int64, lotsType string) ([]*responc
 	}
 	var respLots []*responce.RespLot
 	for _, v := range dbLots {
-		respLot, err := ConvertLotToRespLot(a.StmtsStorage, v)
+		respLot, err := a.StmtsStorage.ConvertLotToRespLot(v)
 		if err != nil {
 			return nil, err
 		}

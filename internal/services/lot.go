@@ -15,19 +15,6 @@ type LotService struct {
 	StmtsStorage *postgres.UsersStorage
 }
 
-func ConvertLotToRespLot(StmtsStorage *postgres.UsersStorage, dbLot *domains.Lot) (*responce.RespLot, error) {
-
-	creator, err := StmtsStorage.FindShortUserByID(dbLot.CreatorID)
-	if err != nil {
-		return nil, err
-	}
-	var buyer *responce.ShortUSer
-	if dbLot.BuyerID != nil {
-		buyer, err = StmtsStorage.FindShortUserByID(*dbLot.BuyerID)
-	}
-	return &responce.RespLot{LotGeneral: dbLot.LotGeneral, Creator: *creator, Buyer: buyer}, nil
-}
-
 func CheckUpdateCreateLotConditions(lot *request.LotToCreateUpdate) error {
 	if lot.PriceStep != nil {
 		if *lot.PriceStep < 1.0 {
@@ -52,7 +39,7 @@ func (ls *LotService) CreateLot(lot *request.LotToCreateUpdate, userID int64) (*
 	if err != nil {
 		return nil, err
 	}
-	respLot, err := ConvertLotToRespLot(ls.StmtsStorage, dbLot)
+	respLot, err := ls.StmtsStorage.ConvertLotToRespLot(dbLot)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +57,7 @@ func (ls *LotService) UpdateLot(lot *request.LotToCreateUpdate, lotID int64) (*r
 	if err != nil {
 		return nil, err
 	}
-	respLot, err := ConvertLotToRespLot(ls.StmtsStorage, dbLot)
+	respLot, err := ls.StmtsStorage.ConvertLotToRespLot(dbLot)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +73,7 @@ func (ls *LotService) GetLotByID(lotID int64) (*responce.RespLot, error) {
 		}
 		return nil, err
 	}
-	respLot, err := ConvertLotToRespLot(ls.StmtsStorage, dbLot)
+	respLot, err := ls.StmtsStorage.ConvertLotToRespLot(dbLot)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +88,7 @@ func (ls *LotService) DeleteLotByID(lotID int64) error {
 }
 
 func (ls *LotService) GetAllLots(status string) ([]*responce.RespLot, error) {
-	dbLots, err := ls.StmtsStorage.FindAllUserLotsBD(status)
+	dbLots, err := ls.StmtsStorage.FindAllLotsBD(status)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +97,7 @@ func (ls *LotService) GetAllLots(status string) ([]*responce.RespLot, error) {
 	}
 	var respLots []*responce.RespLot
 	for _, v := range dbLots {
-		respLot, err := ConvertLotToRespLot(ls.StmtsStorage, v)
+		respLot, err := ls.StmtsStorage.ConvertLotToRespLot(v)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +123,7 @@ func CheckUpdatePriceConditions(userID int64, dbLot *domains.Lot, price float64)
 	}
 	mult := price / *dbLot.PriceStep
 	if !floatlib.FloatIsWhole(mult) {
-		return errors.Wrapf(myerr.ErrConflict, "$Lot price should be a multiple of price_step: %.2f$", dbLot.PriceStep)
+		return errors.Wrapf(myerr.ErrConflict, "$Lot price should be a multiple of price_step: %.2f$", *dbLot.PriceStep)
 	}
 	if dbLot.BuyPrice != nil {
 		if !(price > *dbLot.BuyPrice) {
@@ -165,7 +152,7 @@ func (ls *LotService) UpdatePrice(userID int64, lotID int64, price float64) (*re
 	if err != nil {
 		return nil, err
 	}
-	respLot, err := ConvertLotToRespLot(ls.StmtsStorage, dbLot)
+	respLot, err := ls.StmtsStorage.ConvertLotToRespLot(dbLot)
 	if err != nil {
 		return nil, err
 	}

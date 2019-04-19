@@ -56,6 +56,7 @@ type LotToCreateUpdate struct {
 	MinPrice    float64   `json:"min_price"`
 	PriceStep   *float64  `json:"price_step"`
 	EndAt       time.Time `json:"end_at"`
+	Status      string    `json:"status"`
 }
 
 type WebLotToCreateUpdate struct {

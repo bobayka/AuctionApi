@@ -35,7 +35,7 @@ func (ws *WSService) UpdatePrice(userID int64, lotID int64, priceStep float64) (
 		return nil, err
 	}
 	dbLot.BuyPrice = &price
-	respLot, err := ConvertLotToRespLot(ws.StmtsStorage, dbLot)
+	respLot, err := ws.StmtsStorage.ConvertLotToRespLot(dbLot)
 	if err != nil {
 		return nil, err
 	}

@@ -1,10 +1,7 @@
 {{define "head"}}<title>Список доступных лотов</title>{{end}}
 {{define "body"}}
+    {{template "ScriptgetAllLots" .}}
     <h1>Лоты</h1>
-    <!--<p>
-        <a href="auction/lots/add" >Добавить лот</a>
-    </p>
-    -->
     <style>
         td {
             font-family: Verdana, Arial, Helvetica, sans-serif;
@@ -27,16 +24,20 @@
                 <th>Покупатель</th>
             </tr>
             {{range $index,$value := . }}
-                <tr id="lot_{$value.id}}">
+                <tr>
                     {{with $value}}
                         <td>{{.ID}}</td>
                         <td>{{.Title}}</td>
                         <td>{{.Description}}</td>
-                        <td>{{.BuyPrice}}</td>
+                        <td>
+                            <div id="price_{{.ID}}">{{.BuyPrice}}</div>
+                        </td>
                         <td>{{.MinPrice}}</td>
                         <td>{{.PriceStep}}</td>
-                        <td>{{.Status}}</td>
+                        <td><div id="status_{{.ID}}">{{.Status}}</div></td>
                         <td>{{.EndAt}}</td>
+                        <td>{{.Creator}}</td>
+                        <td>{{.Buyer}}</td>
                     {{end}}
                 </tr>
             {{end}}

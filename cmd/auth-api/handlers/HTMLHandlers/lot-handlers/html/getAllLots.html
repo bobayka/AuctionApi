@@ -1,3 +1,4 @@
+
 {{define "head"}}<title>Список доступных лотов</title>{{end}}
 {{define "body"}}
     <h1>Лоты</h1>
@@ -31,14 +32,14 @@
                     {{with $value}}
                         <td>{{.ID}}</td>
                         <td>{{.Title}}</td>
-                        <td>{{.Description}}</td>
-                        <td>{{.BuyPrice}}</td>
+                        <td>{{or .Description ""}}</td>
+                        <td>{{or .BuyPrice ""}}</td>
                         <td>{{.MinPrice}}</td>
                         <td>{{.PriceStep}}</td>
                         <td>{{.Status}}</td>
                         <td>{{.EndAt}}</td>
                         <td>{{.Creator}}</td>
-                        <td>{{.Buyer}}</td>
+                        <td>{{or .Buyer ""}}</td>
                     {{end}}
                 </tr>
             {{end}}
