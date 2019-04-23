@@ -6,16 +6,17 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/cmd/myerr"
 	"gitlab.com/bobayka/courseproject/internal/postgres"
+	"gitlab.com/bobayka/courseproject/internal/postgres/storage"
 	"gitlab.com/bobayka/courseproject/internal/requests"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	StmtsStorage *postgres.UsersStorage
+	StmtsStorage storage.Storage
 }
 
 func (a *AuthService) RegisterUser(u *request.RegUser) error {
-	err := a.StmtsStorage.AddUser(u)
+	err := a.StmtsStorage.Users.AddUser(u)
 	if err != nil {
 		if pqerr, ok := errors.Cause(err).(*pq.Error); ok && pqerr.Code == postgres.UniqueViolation {
 			return errors.Wrap(myerr.ErrConflict, "$email already exists$")
@@ -26,7 +27,7 @@ func (a *AuthService) RegisterUser(u *request.RegUser) error {
 }
 
 func (a *AuthService) AuthorizeUser(u *request.AuthUser) (string, error) {
-	dbUser, err := a.StmtsStorage.FindUserByEmail(u.Email)
+	dbUser, err := a.StmtsStorage.Users.FindUserByEmail(u.Email)
 	if err != nil {
 		if errors.Cause(err) == sql.ErrNoRows {
 			return "", errors.Wrap(myerr.ErrUnauthorized, "$invalid email$")
@@ -39,7 +40,7 @@ func (a *AuthService) AuthorizeUser(u *request.AuthUser) (string, error) {
 		}
 		return "", errors.Wrapf(myerr.ErrBadRequest, "$password cant be compared$: %s", errС)
 	}
-	token, err := a.StmtsStorage.AddSession(dbUser)
+	token, err := a.StmtsStorage.Sessions.AddSession(dbUser)
 	if err != nil {
 		return "", errors.Wrap(err, "session can't be add")
 	}

@@ -5,10 +5,10 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/cmd/myerr"
 	"gitlab.com/bobayka/courseproject/internal/domains"
-	"gitlab.com/bobayka/courseproject/internal/postgres"
+	"gitlab.com/bobayka/courseproject/internal/postgres/storage"
 )
 
-func CheckValidToken(token string, store *postgres.UsersStorage) (*domains.Session, error) {
+func CheckValidToken(token string, store *storage.SessionStorage) (*domains.Session, error) {
 	ses, err := store.FindSessionByToken(token)
 	if err != nil {
 		if errors.Cause(err) == sql.ErrNoRows {

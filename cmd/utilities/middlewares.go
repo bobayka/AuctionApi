@@ -3,12 +3,12 @@ package utility
 import (
 	"context"
 	"github.com/pkg/errors"
-	"gitlab.com/bobayka/courseproject/internal/postgres"
+	"gitlab.com/bobayka/courseproject/internal/postgres/storage"
 	"gitlab.com/bobayka/courseproject/internal/services"
 	"net/http"
 )
 
-func CheckTokenMiddleware(store *postgres.UsersStorage) func(next http.Handler) http.Handler {
+func CheckTokenMiddleware(store *storage.SessionStorage) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) error {
 			token := r.Header.Get("Authorization")
@@ -28,7 +28,7 @@ func CheckTokenMiddleware(store *postgres.UsersStorage) func(next http.Handler) 
 	}
 }
 
-func CheckCookieMiddleware(store *postgres.UsersStorage) func(next http.Handler) http.Handler {
+func CheckCookieMiddleware(store *storage.SessionStorage) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) error {
 			token, err := r.Cookie("Authorization")

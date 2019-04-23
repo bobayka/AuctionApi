@@ -1,0 +1,46 @@
+{{define "head"}}<title>Список доступных лотов</title>{{end}}
+{{define "body"}}
+    {{template "ScriptgetAllLots" .}}
+    <h1>Лоты</h1>
+    <style>
+        td {
+            font-family: Verdana, Arial, Helvetica, sans-serif;
+            font-size: 8pt; /* Размер шрифта в пунктах */
+        }
+    </style>
+
+    <div>
+        <table border="1">
+            <tr>
+                <th>ИД лота</th>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Цена</th>
+                <th>Минимальная цена</th>
+                <th>Шаг</th>
+                <th>Статус</th>
+                <th>Окончание</th>
+                <th>Создатель</th>
+                <th>Покупатель</th>
+            </tr>
+            {{range $index,$value := . }}
+                <tr>
+                    {{with $value}}
+                        <td>{{.ID}}</td>
+                        <td>{{.Title}}</td>
+                        <td>{{or .Description ""}}</td>
+                        <td>
+                            <div id="price_{{.ID}}">{{or .BuyPrice ""}}</div>
+                        </td>
+                        <td>{{.MinPrice}}</td>
+                        <td>{{.PriceStep}}</td>
+                        <td><div id="status_{{.ID}}">{{.Status}}</div></td>
+                        <td>{{.EndAt}}</td>
+                        <td>{{.Creator}}</td>
+                        <td>{{or .Buyer ""}}</td>
+                    {{end}}
+                </tr>
+            {{end}}
+        </table>
+    </div>
+{{end}}

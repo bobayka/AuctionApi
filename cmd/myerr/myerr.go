@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/internal/responce"
+	"google.golang.org/grpc/status"
 	"log"
 	"net/http"
 	"strings"
@@ -25,6 +26,19 @@ type ErrString struct {
 	Err string `json:"error"`
 }
 
+func ConvGRPCStatusToMyError(status *status.Status) error {
+	switch status.Code() {
+	case http.StatusNotFound:
+		return errors.Wrap(ErrNotFound, status.Message())
+	case http.StatusBadRequest:
+		return errors.Wrap(ErrBadRequest, status.Message())
+	case http.StatusUnauthorized:
+		return errors.Wrap(ErrUnauthorized, status.Message())
+	case http.StatusConflict:
+		return errors.Wrap(ErrConflict, status.Message())
+	}
+	return errors.New(status.Message())
+}
 func GiveErrToClient(str string) string {
 	lastInd := strings.LastIndex(str, "$")
 	initialInd := strings.Index(str, "$")
