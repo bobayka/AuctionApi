@@ -3,7 +3,7 @@ package main
 import (
 	_ "github.com/lib/pq"
 	"gitlab.com/bobayka/courseproject/cmd/Protobuf"
-	"gitlab.com/bobayka/courseproject/cmd/gateway-api/general"
+	gatewayapi "gitlab.com/bobayka/courseproject/cmd/gateway-api/general"
 	"gitlab.com/bobayka/courseproject/internal/postgres"
 	"gitlab.com/bobayka/courseproject/internal/postgres/storage"
 	"google.golang.org/grpc"
@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+//nolint: gochecknoinits
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -37,10 +38,7 @@ func main() {
 	defer conn.Close()
 	client := lotspb.NewLotsServiceClient(conn)
 
-	auth := gatewayApi.NewGatewayApi(storage, client)
+	auth := gatewayapi.NewGatewayAPI(storage, client)
 	r := auth.Routes()
-	go func() {
-		log.Println(http.ListenAndServe("localhost:8080", nil))
-	}()
 	log.Fatal(http.ListenAndServe(":5000", r))
 }

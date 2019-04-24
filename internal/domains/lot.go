@@ -22,8 +22,6 @@ type Lot struct {
 }
 
 func (lg *Lot) IsDeleted() bool {
-	if lg.DeletedAt != nil {
-		return true
-	}
-	return false
+	return lg.DeletedAt != nil
+
 }

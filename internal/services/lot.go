@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/cmd/Protobuf"
 	"gitlab.com/bobayka/courseproject/cmd/myerr"
@@ -28,6 +29,9 @@ func (ls *LotService) ConvertLotToRespLot(dbLot *domains.Lot) (*lotspb.Lot, erro
 	var buyer *responce.ShortUser
 	if dbLot.BuyerID != nil {
 		buyer, err = ls.LotStmtsStorage.FindShortUserByID(*dbLot.BuyerID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	respLot := &responce.RespLot{LotGeneral: dbLot.LotGeneral, Creator: *creator, Buyer: buyer}
 	return responce.ConvertRespLotToGRPC(respLot)
@@ -43,6 +47,9 @@ func (ls *LotService) BackgroundUpdateLots(ctx context.Context, in *lotspb.Empty
 
 	for _, v := range lotsID {
 		dbLot, err := ls.LotStmtsStorage.FindLotByID(*v)
+		if err != nil {
+			return nil, err
+		}
 		respLot, err := ls.ConvertLotToRespLot(dbLot)
 		if err != nil {
 			return nil, err
@@ -82,7 +89,7 @@ func (ls *LotService) CreateLot(ctx context.Context, lot *lotspb.LotCreateUpdate
 		price = 1
 		lotToCrUp.PriceStep = &price
 	}
-	if err := CheckUpdateCreateLotConditions(lotToCrUp); err != nil {
+	if err = CheckUpdateCreateLotConditions(lotToCrUp); err != nil {
 		return nil, status.Errorf(http.StatusConflict, err.Error())
 	}
 	LotID, err := ls.LotStmtsStorage.InsertLot(*userID, lotToCrUp)
@@ -113,7 +120,7 @@ func (ls *LotService) UpdateLot(ctx context.Context, lot *lotspb.LotCreateUpdate
 		}
 		return nil, status.Errorf(http.StatusInternalServerError, err.Error())
 	}
-	if err := deleteUpdateLotConditions(dbLot, *UserID); err != nil {
+	if err = deleteUpdateLotConditions(dbLot, *UserID); err != nil {
 		return nil, status.Errorf(http.StatusConflict, err.Error())
 	}
 	var price float64
@@ -121,10 +128,10 @@ func (ls *LotService) UpdateLot(ctx context.Context, lot *lotspb.LotCreateUpdate
 		price = 1
 		lotToCrUp.PriceStep = &price
 	}
-	if err := CheckUpdateCreateLotConditions(lotToCrUp); err != nil {
+	if err = CheckUpdateCreateLotConditions(lotToCrUp); err != nil {
 		return nil, status.Errorf(http.StatusBadRequest, err.Error())
 	}
-	if err := ls.LotStmtsStorage.UpdateLotBD(*lotID, lotToCrUp); err != nil {
+	if err = ls.LotStmtsStorage.UpdateLotBD(*lotID, lotToCrUp); err != nil {
 		return nil, status.Errorf(http.StatusInternalServerError, err.Error())
 	}
 	dbLot, err = ls.LotStmtsStorage.FindLotByID(*lotID)
@@ -154,11 +161,11 @@ func (ls *LotService) GetLotByID(ctx context.Context, lotID *lotspb.LotID) (*lot
 	}
 	return lotGRPS, nil
 }
-func deleteUpdateLotConditions(dbLot *domains.Lot, UserID int64) error {
+func deleteUpdateLotConditions(dbLot *domains.Lot, userID int64) error {
 	if dbLot.Status != "created" {
-		return errors.New("$active or finished lot can't be update$")
+		return errors.New("$active or finished lot can't be update/delete$")
 	}
-	if dbLot.CreatorID != UserID {
+	if dbLot.CreatorID != userID {
 		return errors.New("$only creator can update lot$")
 	}
 	if dbLot.IsDeleted() {
@@ -174,13 +181,15 @@ func (ls *LotService) DeleteLotByID(ctx context.Context, lotID *lotspb.UserLotID
 		}
 		return nil, status.Errorf(http.StatusInternalServerError, errors.Wrap(err, "can't find lot bd").Error())
 	}
+
 	if err := deleteUpdateLotConditions(dbLot, lotID.UserID); err != nil {
 		return nil, status.Errorf(http.StatusConflict, err.Error())
 	}
 	if err := ls.LotStmtsStorage.DeleteLotBD(lotID.LotID); err != nil {
 		return nil, status.Errorf(http.StatusInternalServerError, err.Error())
 	}
-	return nil, nil
+	fmt.Println("fdlfldmf")
+	return &lotspb.Empty{}, nil
 }
 
 func (ls *LotService) GetAllLots(ctx context.Context, req *lotspb.Status) (*lotspb.Lots, error) {

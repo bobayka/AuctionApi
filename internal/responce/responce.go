@@ -3,11 +3,13 @@ package responce
 import (
 	"fmt"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/cmd/Protobuf"
-	"gitlab.com/bobayka/courseproject/internal/MyGRPCLib"
+	mygrpclib "gitlab.com/bobayka/courseproject/internal/MyGRPCLib"
 	"gitlab.com/bobayka/courseproject/internal/domains"
 	"net/http"
+	"time"
 )
 
 type RespLot struct {
@@ -44,8 +46,8 @@ func ConvGRPCToShortUser(su *lotspb.ShortUser) *ShortUser {
 }
 
 func ConvertRespLotToGRPC(resp *RespLot) (*lotspb.Lot, error) {
-	description := MyGRPCLib.ConvStringPointerToString(resp.Description)
-	buyPrice := MyGRPCLib.ConvFloat64PointerToFloat64(resp.BuyPrice)
+	description := mygrpclib.ConvStringPointerToString(resp.Description)
+	buyPrice := mygrpclib.ConvFloat64PointerToFloat64(resp.BuyPrice)
 	endAt, err := ptypes.TimestampProto(resp.EndAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't convert time to timestamp")
@@ -58,17 +60,24 @@ func ConvertRespLotToGRPC(resp *RespLot) (*lotspb.Lot, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't convert time to timestamp")
 	}
+	var deletedAt *timestamp.Timestamp
+	if resp.DeletedAt != nil {
+		deletedAt, err = ptypes.TimestampProto(*resp.DeletedAt)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't convert time to timestamp")
+		}
+	}
 	creator := ConvShortUserToGRPC(&resp.Creator)
 
 	buyer := ConvShortUserToGRPC(resp.Buyer)
 	return &lotspb.Lot{ID: resp.ID, Title: resp.Title, Description: description,
 		BuyPrice: buyPrice, MinPrice: resp.MinPrice, PriceStep: resp.PriceStep,
 		Status: resp.Status, EndAt: endAt, CreatedAt: createdAt, UpdatedAt: updatedAt,
-		Creator: creator, Buyer: buyer}, nil
+		Creator: creator, Buyer: buyer, DeletedAt: deletedAt}, nil
 }
 
 func ConvertGRPCToRespLot(resp *lotspb.Lot) (*RespLot, error) {
-	price := MyGRPCLib.ConvFloat64ToFloat64Pointer(resp.BuyPrice)
+	price := mygrpclib.ConvFloat64ToFloat64Pointer(resp.BuyPrice)
 	endAt, err := ptypes.Timestamp(resp.EndAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't convert timestamp to time")
@@ -81,12 +90,20 @@ func ConvertGRPCToRespLot(resp *lotspb.Lot) (*RespLot, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't convert timestamp to time")
 	}
+	var deletedAt *time.Time
+	if resp.DeletedAt != nil {
+		deleted, err := ptypes.Timestamp(resp.DeletedAt)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't convert timestamp to time")
+		}
+		deletedAt = &deleted
+	}
 	buyer := ConvGRPCToShortUser(resp.Buyer)
 
 	return &RespLot{LotGeneral: domains.LotGeneral{ID: resp.ID, Title: resp.Title,
 		Description: &resp.Description, BuyPrice: price, MinPrice: resp.MinPrice,
 		PriceStep: resp.PriceStep, Status: resp.Status, EndAt: endAt, CreatedAt: createdAt,
-		UpdatedAt: updatedAt},
+		UpdatedAt: updatedAt, DeletedAt: deletedAt},
 		Creator: ShortUser{ID: resp.Creator.ID, FirstName: resp.Creator.FirstName, LastName: resp.Creator.LastName},
 		Buyer:   buyer,
 	}, nil

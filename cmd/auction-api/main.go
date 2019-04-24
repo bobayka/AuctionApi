@@ -11,6 +11,7 @@ import (
 	"net"
 )
 
+//nolint: gosec
 func main() {
 	db, err := postgres.PGInit("localhost", 5432, "bobayka", "12345", "TinkoffProj")
 	if err != nil {

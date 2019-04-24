@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+
+import "google/protobuf/timestamp.proto";
+
+package login;
+option go_package = "lotspb";
+
+message LotID {
+    int64 lotID = 1;
+}
+message UserLotID {
+    int64 lotID = 1;
+    int64 userID = 2;
+}
+message Status {
+    string status = 1;
+}
+message LotCreateUpdate {
+    string title = 1;
+    string description = 2;
+    double min_price = 3;
+    double price_step = 4;
+    google.protobuf.Timestamp end_at = 5;
+    string status = 6;
+    int64 userID = 7;
+    int64 lotID = 8;
+}
+
+message BuyLot {
+    double price = 1;
+    int64 userID = 2;
+    int64 lotID = 3;
+    bool isWS = 4;
+}
+
+message ShortUser {
+    int64 ID = 1;
+    string first_name = 2;
+    string last_name = 3;
+}
+message Lot {
+    int64 ID = 1;
+    string title = 2;
+    string description = 3;
+    double min_price = 4;
+    double price_step = 5;
+    google.protobuf.Timestamp end_at = 6;
+    string status = 7;
+    double buy_price = 8;
+    google.protobuf.Timestamp created_at = 9;
+    google.protobuf.Timestamp updated_at = 10;
+    google.protobuf.Timestamp deleted_at = 11;
+    ShortUser creator = 12;
+    ShortUser buyer = 13;
+}
+
+message Lots {
+    repeated Lot lots = 1;
+}
+
+message Empty {
+}
+
+message UserLots {
+    int64 id = 1;
+    string type = 2;
+}
+service LotsService {
+    rpc GetAllLots (Status) returns (Lots) {
+    }
+    rpc GetLotByID (LotID) returns (Lot) {
+    }
+    rpc CreateLot (LotCreateUpdate) returns (Lot) {
+    }
+    rpc UpdateLot (LotCreateUpdate) returns (Lot) {
+    }
+    rpc DeleteLotByID (UserLotID) returns (Empty) {
+    }
+    rpc UpdateLotPrice (BuyLot) returns (Lot) {
+    }
+    rpc GetLotsByUserID (UserLots) returns (Lots) {
+    }
+    rpc BackgroundUpdateLots (Empty) returns (Lots) {
+    }
+}
+
+//message Msg{
+//    Client client = 1;
+//}
+//message Client {
+//    int64 lotID = 1;
+//}
+//
+//message Broadcast {
+//    bytes data = 1;
+//}
+//service WSLotsService {
+//    //    rpc UpdateLotPrice (BuyLot) returns (Empty) {
+//    //    }
+//    rpc RegisterClient (Msg) returns (Empty) {
+//
+//    }
+//    rpc GetLot (Msg) returns (stream Broadcast) {
+//    }
+//    rpc UnregisterClient (Msg) returns (Empty) {
+//
+//    }
+//}

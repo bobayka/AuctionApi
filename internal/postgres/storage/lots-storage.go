@@ -207,16 +207,13 @@ func (s *LotsStorage) BackgroundUpdateLotsBD() ([]*int64, error) {
 	var lotsID []*int64
 	for rows.Next() {
 		var lotID int64
-		if err := rows.Scan(&lotID); err != nil {
-			return nil, errors.Wrapf(err, "can't scan lot")
+		if errR := rows.Scan(&lotID); errR != nil {
+			return nil, errors.Wrapf(errR, "can't scan lot")
 		}
 		lotsID = append(lotsID, &lotID)
 	}
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, errors.Wrap(err, "rows return error")
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "error in rows lot to slice")
 	}
 	return lotsID, nil
 

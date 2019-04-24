@@ -1,44 +1,44 @@
-package gatewayApi
+package gatewayapi
 
 import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"gitlab.com/bobayka/courseproject/cmd/Protobuf"
-	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/HTMLHandlers/auth-handlers"
-	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/HTMLHandlers/lot-handlers"
-	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/auth-handlers"
-	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/lot-handlers"
-	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers"
-	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/websocket-handlers"
+	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/htmlhandlers/auth-handlers"
+	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/htmlhandlers/lot-handlers"
+	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/jsonhandlers/auth-handlers"
+	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/jsonhandlers/lot-handlers"
+	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/jsonhandlers/user-handlers"
+	"gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/jsonhandlers/websocket-handlers"
 	"gitlab.com/bobayka/courseproject/cmd/utilities"
 	"gitlab.com/bobayka/courseproject/internal/postgres/storage"
 	"time"
 )
 
-type gatewayApi struct {
-	lotServiceClient lotspb.LotsServiceClient
-	storage          *storage.SessionStorage
-	auth             *authhandlers.AuthHandler
-	lot              *lothandlers.LotServiceHandler
-	user             *userhandlers.UserHandler
-	webAuth          *authWeb.WebAuthHandler
-	webLot           *lotWeb.WebLotHandler
-	wsLot            *websocket_handlers.LotWSHandler
+type GatewayAPI struct {
+	//lotServiceClient lotspb.LotsServiceClient
+	storage *storage.SessionStorage
+	auth    *authhandlers.AuthHandler
+	lot     *lothandlers.LotServiceHandler
+	user    *userhandlers.UserHandler
+	webAuth *authweb.WebAuthHandler
+	webLot  *lotweb.WebLotHandler
+	wsLot   *websockethandlers.LotWSHandler
 }
 
-func NewGatewayApi(storage storage.Storage, client lotspb.LotsServiceClient) *gatewayApi {
+func NewGatewayAPI(storage storage.Storage, client lotspb.LotsServiceClient) *GatewayAPI {
 	auth := authhandlers.NewAuthHandler(storage)
 	lot := lothandlers.NewLotHandler(client)
 	user := userhandlers.NewUserHandlers(storage.Users)
-	webLot := lotWeb.NewWebLotHandler(client)
-	webAuth := authWeb.NewWebAuthHandler(storage)
-	wsLot := websocket_handlers.NewLotWSHandler(client)
+	webLot := lotweb.NewWebLotHandler(client)
+	webAuth := authweb.NewWebAuthHandler(storage)
+	wsLot := websockethandlers.NewLotWSHandler(client)
 	wsLot.BackGroundFinishEndedLots(time.Second)
-	return &gatewayApi{storage: storage.Sessions, auth: auth, lot: lot, user: user, webLot: webLot, webAuth: webAuth, wsLot: wsLot}
+	return &GatewayAPI{storage: storage.Sessions, auth: auth, lot: lot, user: user, webLot: webLot, webAuth: webAuth, wsLot: wsLot}
 
 }
 
-func (a *gatewayApi) Routes() *chi.Mux {
+func (a *GatewayAPI) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Use(middleware.Logger)

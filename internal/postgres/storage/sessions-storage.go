@@ -6,6 +6,7 @@ import (
 	"gitlab.com/bobayka/courseproject/internal/domains"
 )
 
+//nolint: gosec
 const (
 	sessionInsertFields     = `session_id, user_id`
 	sessionInsertQuery      = `INSERT INTO sessions (` + sessionInsertFields + `) VALUES ($1, $2)`

@@ -1,4 +1,4 @@
-package MyGRPCLib
+package mygrpclib
 
 func ConvFloat64ToFloat64Pointer(f float64) *float64 {
 	if f == 0.0 {

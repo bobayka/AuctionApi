@@ -2,6 +2,7 @@ package utility
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/pkg/errors"
 	"gitlab.com/bobayka/courseproject/cmd/myerr"
@@ -62,6 +63,8 @@ func ReadReqAndCheckEmail(r *http.Request, userData request.EmailGetter) error {
 	if err := ReadReqData(r, userData); err != nil {
 		return errors.Wrap(err, "read req data")
 	}
+	fmt.Printf("%+v", userData)
+
 	if err := CheckEmail(userData.GetEmail()); err != nil {
 		return errors.Wrap(err, "error in check email")
 	}

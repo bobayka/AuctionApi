@@ -31,7 +31,7 @@ func CheckTokenMiddleware(store *storage.SessionStorage) func(next http.Handler)
 func CheckCookieMiddleware(store *storage.SessionStorage) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) error {
-			token, err := r.Cookie("Authorization")
+			token, err := r.Cookie("x-authorization")
 			if err != nil {
 				switch err {
 				case http.ErrNoCookie:
