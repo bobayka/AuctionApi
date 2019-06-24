@@ -1,0 +1,12 @@
+{{define "head"}}<title>Регистрация</title>{{end}}
+{{define "body"}}
+    <h1>Регистрация</h1>
+    <form action="/signup" method="post">
+        <p>Имя:<br> <input type="text" name = "firstName" required placeholder="Ваше имя"></p>
+        <p>Фамилия:<br> <input type="text" name = "lastName" required placeholder="Ваша фамилия"></p>
+        <p>День рождения:<br> <input type="text" name = "birthday" placeholder="День рождения"></p>
+        <p>Email:<br> <input type="email" name = "email" required placeholder="Ваш email"></p>
+        <p>Пароль:<br> <input type="password" name = "password" required placeholder="Ваш пароль"></p>
+        <p><input type="submit" value="Регистрация"/></p>
+    </form>
+{{end}}

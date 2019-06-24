@@ -1,0 +1,9 @@
+{{define "head"}}<title>Авторизация</title>{{end}}
+{{define "body"}}
+    <h1>Авторизация</h1>
+    <form action="/signin" method="post">
+        <p>Email:<br> <input type="email" name = "email" required placeholder="Ваш email"></p>
+        <p>Пароль:<br> <input type="password" name = "password" required placeholder="Ваш пароль"></p>
+        <p><input type="submit" value="Авторизация"/></p>
+    </form>
+{{end}}

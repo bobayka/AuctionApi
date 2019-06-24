@@ -1,0 +1,45 @@
+{{define "head"}}<title>Список доступных лотов</title>{{end}}
+{{define "body"}}
+    {{template "wsBuyLotScript" .}}
+    <h1>Лоты</h1>
+    <style>
+        td {
+            font-family: Verdana, Arial, Helvetica, sans-serif;
+            font-size: 8pt; /* Размер шрифта в пунктах */
+        }
+    </style>
+
+    <div>
+        <table border="1">
+            <tr>
+                <th>ИД лота</th>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Статус</th>
+                <th>Мин. цена</th>
+                <th>Текущая цена</th>
+                <th>Шаг</th>
+            </tr>
+            <tr>
+                <td>{{.ID}}</td>
+                <td>{{.Title}}</td>
+                <td>{{.Description}}</td>
+                <td>
+                    <div id="status_{{.ID}}">{{.Status}}</div>
+                </td>
+                <td>{{.MinPrice}}</td>
+                <td>
+                    <div id="price_{{.ID}}">{{.BuyPrice}}</div>
+                </td>
+                {{/*                {{if and (ne .UserID .Lot.CreatorID.ID) (ne .UserID .Lot.BuyerID.ID) }}*/}}
+                <td>
+                    <form action="" method="post"
+                          onsubmit="AddPrice('/auction/lots/{{.ID}}/updprice',{{.PriceStep}});return false;">
+                        <p><input type="submit" value="+{{.PriceStep}}"/></p>
+                    </form>
+                </td>
+                {{/*                {{end}}*/}}
+            </tr>
+        </table>
+    </div>
+{{end}}

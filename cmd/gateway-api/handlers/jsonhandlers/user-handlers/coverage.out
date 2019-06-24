@@ -1,0 +1,19 @@
+mode: count
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:15.66,17.2 1 1
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:23.41,31.2 4 1
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:33.83,36.54 2 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:39.2,40.16 2 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:43.2,44.16 2 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:48.2,49.16 2 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:52.2,52.12 1 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:36.54,38.3 1 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:40.16,42.3 1 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:44.16,46.3 1 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:49.16,51.3 1 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:55.80,57.16 2 2
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:61.2,62.16 2 2
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:66.2,67.16 2 1
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:70.2,70.12 1 1
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:57.16,59.3 1 0
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:62.16,64.3 1 1
+gitlab.com/bobayka/courseproject/cmd/gateway-api/handlers/JSONHandlers/user-handlers/user-handlers.go:67.16,69.3 1 0
